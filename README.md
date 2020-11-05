@@ -1,5 +1,6 @@
 # metaPop #
-A pipeline for the macro- and micro-diversity analyses and visualization of metagenomic-derived populations
+A pipeline for the macro- and micro-diversity analyses and visualization of metagenomic-derived populations<br/><br/>
+Developed by Ann Gregory and Kenji Gerhardt
 
 Description
 ---------------
