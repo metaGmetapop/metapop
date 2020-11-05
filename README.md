@@ -1,4 +1,4 @@
-# metaPop #
+# MetaPop #
 A pipeline for the macro- and micro-diversity analyses and visualization of metagenomic-derived populations<br/><br/>
 
 
