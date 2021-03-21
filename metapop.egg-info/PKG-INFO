@@ -1,0 +1,18 @@
+Metadata-Version: 2.1
+Name: metapop
+Version: 1.0.0
+Summary: A metagenomic statistic pipeline.
+Home-page: UNKNOWN
+Author: Kenji Gerhardt
+Author-email: kenji.gerhardt@gmail.com
+License: UNKNOWN
+Description: # metapop
+        Authors: Kenji Gerhardt and Ann Gregory
+        Emails: Kenji.Gerhardt@gmail.com and anin.gregory@gmail.com
+        
+        A pipeline for the macro- and micro-diversity analyses and visualization of metagenomic-derived populations.
+        
+        
+Platform: UNKNOWN
+Requires-Python: >=3
+Description-Content-Type: text/markdown
