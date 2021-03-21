@@ -1,3 +1,0 @@
-[console_scripts]
-metapop = metapop.metapop_main:main
-
