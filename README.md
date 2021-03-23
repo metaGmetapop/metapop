@@ -20,13 +20,15 @@ The visualization module contains a component designed to summarize preprocessin
 Installation
 ---------------
 
-MetaPop is an R script which makes additional calls to a variety of external tools and command line utilities. It is expected to be run from within a unix environment. A unix environment can be accessed through a natively unix system, a virtual machine, or an appropriate platform such as the windows ubuntu terminal.
+MetaPop is a combination of python and R scripts which makes additional calls to a variety of external tools and command line utilities. It is expected to be run from within a unix environment. A unix environment can be accessed through a natively unix system, a virtual machine, or an appropriate platform such as the windows ubuntu terminal.
 
 In order to run MetaPop, a user will require the following software:<br/>
+Python 3.6+<br/>
 R<br/>
 Samtools<br/>
 BCFTools<br/>
 Prodigal prokaryotic gene prediction<br/>
+Pysam<br/>
 
 Additionally, the following R packages are required:<br/>
 doParallel<br/>
@@ -45,7 +47,11 @@ gggenes<br/>
 
 However, MetaPop has been packaged with conda - to install it, all you must do as a user is install anaconda or miniconda (<https://docs.anaconda.com/anaconda/install/>) on your unix system, and then download the metapop conda package. This will include and install all of the needed software and libraries for you.
 
-`conda install -c bioconda metapop`
+`conda install -c bioconda bcftools samtools prodigal pysam bioconductor-rsamtools bioconductor-biostrings
+conda install -c conda-forge r-base
+conda install -c r r-data.table r-ggplot2 r-rcolorbrewer
+conda install -c conda-forge r-doparallel r-cowplot r-bit64 r-gggenes r-stringr r-vegan r-compositions r-pheatmap
+conda install -c kgerhardt metapop`
 
 Usage
 ---------------
