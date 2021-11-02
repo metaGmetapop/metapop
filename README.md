@@ -69,12 +69,12 @@ Mandatory arguments:<br/>
 `-assem` : Absolute path to assembled contigs<br/>
 `-ct` : Absolute path to counts normalization file in tsv format (only mandatory if performing macrodiversity calculations)<br/>
 
-ct file example
+ct file example (exclude *.bam* suffix and headers) 
 BAM File Names  | Number Reads or Bps in Read Library
 ------------- | -------------
-readlibrary1.bam  | 52000000 
-readlibrary2.bam  | 43000000
-readlibrary3.bam  | 73000000
+readlibrary1  | 52000000 
+readlibrary2 | 43000000
+readlibrary3  | 73000000
 
 Program options:<br/>
 `-preprocess_only` : Flag indicating to filter reads for %ID, length, and depth of coverage and stop.<br/>
