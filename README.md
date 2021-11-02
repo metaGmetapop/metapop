@@ -92,7 +92,7 @@ Preprocessing Arguments:<br/>
 `-bcf` : absolute path to bcftools - optional if samtools is in PATH<br/>
 `-prodigal` : absolute path to prodigal gene prediction tool - optional if prodigal is in PATH or if -genes specified with existing prodigal FASTA format gene calls.<br/>
 `-genes` : absolute path to prodigal FASTA format gene file for assembled contiigs. May be left absent if you want metapop to generate this file. Please note if you supply your own gene file, the header for each gene in the fastea format neeeds to be in prodigal format.<br/><br/>
-Prodigal FASTA header format example: `>contig1234_1 # 2 # 181 # 1 # ID=1_1;partial=10;start_type=Edge;rbs_motif=None;rbs_spacer=None;gc_cont=0.628`<br/>
+Prodigal FASTA header format example: `>contig1234_1 # 2 # 181 # 1 # ID=1_1;partial=10;start_type=Edge;rbs_motif=None;rbs_spacer=None;gc_cont=0.628`<br/><br/>
 `>(contig name_gene number) # (start position in contig) # (end position in contig) # (template (1) or antisense (-1) strand) # (can put NA here)).`<br/><br/>
 `-id` INT : reads below this percent identity (mismatch/alignment length) are removed. Use -global to calculate as (mismatch/read length). Default 95.<br/>
 `-min` INT : reads with alignments shorter than this are removed. Default 30.<br/>
