@@ -34,8 +34,6 @@ Additionally, the following R packages are required:<br/>
 doParallel<br/>
 data.table<br/>
 stringr<br/>
-Biostrings<br/>
-Rsamtools<br/>
 ggplot2<br/>
 cowplot<br/>
 vegan<br/>
@@ -68,6 +66,9 @@ Mandatory arguments:<br/>
 `-dir` : Directory containing mapped read files in BAM format (files do not need to be sorted and indexed)<br/>
 `-assem` : Absolute path to assembled contigs<br/>
 `-ct` : Absolute path to counts normalization file in tsv format (only mandatory if performing macrodiversity calculations)<br/>
+
+To convert SAM to BAM files, you can use the following command once you activate your conda environment:<br/>
+`samtools view -S -b sample.sam > sample.bam`
 
 ct file example (exclude *.bam* suffix and table headers below) 
 BAM File Names  | Number Reads or Bps in Read Library
