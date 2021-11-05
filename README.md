@@ -28,13 +28,17 @@ R<br/>
 Samtools<br/>
 BCFTools<br/>
 Prodigal prokaryotic gene prediction<br/>
+
+The following Python packages are required:<br/>
 Pysam<br/>
+Numpy<br/>
 
 Additionally, the following R packages are required:<br/>
 doParallel<br/>
 data.table<br/>
 stringr<br/>
 ggplot2<br/>
+ggrepel<br/>
 cowplot<br/>
 vegan<br/>
 compositions<br/>
@@ -45,11 +49,12 @@ gggenes<br/>
 
 However, MetaPop has been packaged with conda - to install it, all you must do as a user is install anaconda or miniconda (<https://docs.anaconda.com/anaconda/install/>) on your unix system, and then download the metapop conda package. This will include and install all of the needed software and libraries for you.
 
-`conda install -c bioconda bcftools samtools prodigal pysam bioconductor-rsamtools bioconductor-biostrings`<br/>
+`conda install -c bioconda bcftools samtools prodigal pysam`<br/>
+`conda install -c anaconda numpy`<br/>
 `conda install -c conda-forge r-base`<br/>
 `conda install -c r r-data.table r-ggplot2 r-rcolorbrewer`<br/>
 `conda install -c conda-forge r-doparallel r-cowplot r-bit64 r-gggenes r-stringr r-vegan r-compositions r-pheatmap`<br/>
-`conda install -c kgerhardt metapop`<br/>
+`conda install -c metaGmetapop metapop`<br/>
 
 Usage
 ---------------
