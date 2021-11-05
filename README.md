@@ -27,7 +27,7 @@ Python 3.6+<br/>
 R<br/>
 Samtools<br/>
 BCFTools<br/>
-Prodigal prokaryotic gene prediction<br/>
+Prodigal<br/>
 
 The following Python packages are required:<br/>
 Pysam<br/>
