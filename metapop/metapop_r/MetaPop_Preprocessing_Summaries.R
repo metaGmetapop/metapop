@@ -33,11 +33,6 @@ suppressMessages(suppressWarnings(library(cowplot, lib.loc = library_location)))
 
 suppressMessages(suppressWarnings(library(bit64, lib.loc = library_location)))
 
-#Original read counts is annoying... I'll have to pass this in
-#original_files <- list.files(full.names = T, path = "Metapop_BAMs")
-
-
-#TODO update lengths, file paths
 cov_depth <- list.files(path="MetaPop/03.Breadth_and_Depth", full.names = T, pattern="breadth_and_depth")
 c_d_names <- substring(cov_depth, 30, nchar(cov_depth)-22)
 

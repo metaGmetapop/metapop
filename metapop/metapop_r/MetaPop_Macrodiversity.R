@@ -21,13 +21,13 @@ norm_file <- options[8]
 whole_mag <- options[9]
 
 if(whole_mag == "1"){
-    whole_mag <- T
+  whole_mag <- T
 }else{
-    whole_mag <- F
+  whole_mag <- F
 }
 
 
-mag_cutoff <-as.numeric( options[10])
+mag_cutoff <-as.numeric(options[10])
 
 min_contig_length  <- as.numeric(options[11])
 
@@ -36,10 +36,10 @@ setwd(directory_name)
 suppressMessages(suppressWarnings(library(doParallel, lib.loc = library_location)))
 suppressMessages(suppressWarnings(library(data.table, lib.loc = library_location)))
 suppressMessages(suppressWarnings(library(stringr, lib.loc = library_location)))
-suppressMessages(suppressWarnings(library(Biostrings, lib.loc = library_location)))
-suppressMessages(suppressWarnings(library(Rsamtools, lib.loc = library_location)))
 suppressMessages(suppressWarnings(library(ggplot2, lib.loc = library_location)))
 suppressMessages(suppressWarnings(library(cowplot, lib.loc = library_location)))
+
+suppressMessages(suppressWarnings(library(ggrepel, lib.loc = library_location)))
 
 suppressMessages(suppressWarnings(library(vegan, lib.loc = library_location)))
 suppressMessages(suppressWarnings(library(compositions, lib.loc = library_location)))
@@ -48,32 +48,43 @@ suppressMessages(suppressWarnings(library(RColorBrewer, lib.loc = library_locati
 
 suppressMessages(suppressWarnings(library(bit64, lib.loc = library_location)))
 
-
-#Todo update
 cov_depth <- list.files(full.names = T, path = "MetaPop/03.Breadth_and_Depth")
 
+#We just need the names, here
+original_assemblies <- readLines(ref_fasta)
+#Headers only.
+original_assemblies <- original_assemblies[substr(original_assemblies, 1, 1) == ">"]
 
-norm_file <- fread(norm_file, sep = "\t")
+original_assemblies <- substr(original_assemblies, 2, nchar(original_assemblies))
 
-original_assemblies <- readDNAStringSet(ref_fasta)
-
-#Hopefully nothing breaks here
-names(original_assemblies) <- unlist(lapply(names(original_assemblies), function(x){
-  return(strsplit(x, split = " ")[[1]][1])
+original_assemblies <- unlist(lapply(original_assemblies, function(x){
+  
+  res  = strsplit(x, split = ' ')[[1]]
+  if(length(res) > 1){
+    res = res[1]
+  }
+  
+  return(res)
+  
 }))
 
+norm_file <- fread(norm_file, sep = "\t")
+#Figures out the normalization factors on each sample.
+norm_file$factor <- norm_file$V2/max(norm_file$V2)
+
 #Long format is generally better for operations like this. It's not a matrix yet, but you can ignore that
-abundance_matrix <- CJ(names(original_assemblies), unlist(lapply(cov_depth, function(x){
+abundance_matrix <- CJ(original_assemblies, unlist(lapply(cov_depth, function(x){
   
   strsplit(strsplit(x, split = "MetaPop/03.Breadth_and_Depth/")[[1]][2], split = "_breadth_and_depth.tsv")[[1]][1]
   
 })))
 
+colnames(abundance_matrix) = c("V1", "V2")
+
+
 #Initialize abundance counts at zero.
 abundance_matrix$abundance = 0
 
-#Figures out the normalization factors on each sample.
-norm_file$factor <- norm_file$V2/max(norm_file$V2)
 
 #This both creates and normalizes the abundance table, with the caveats that only things with >= min. coverage or >= min bp covered are considered with depth >= 1
 for(i in cov_depth){
@@ -81,12 +92,10 @@ for(i in cov_depth){
   match_name <- strsplit(strsplit(i, split = "MetaPop/03.Breadth_and_Depth/")[[1]][2], split = "_breadth_and_depth.tsv")[[1]][1]
   
   tmp <- fread(i, sep = "\t", header = F)
-
+  
   tmp$V4[!(tmp$V3 >= coverage_cutoff | (tmp$V2*(tmp$V3/100))>=min_contig_length)] <- 0
   
-  #Needs the raw table too
-  #tmp$V4 <- tmp$V4/norm_file$factor[match(match_name, norm_file$V1)]
-
+  
   #This looks odd, but gets the rows which match the sample, then matches the contigs from the depths and adds in the values to the correct rows.
   abundance_matrix[V2==match_name,][match(tmp$V1, V1)]$abundance <- tmp$V4
   
@@ -163,7 +172,7 @@ Richness_plot <- ggplot(data=alpha_diversity_data)+
   scale_y_continuous(name ="Species\nRichness")+
   theme_bw()+
   theme(axis.title.x=element_blank(),axis.text.x = element_text(angle = 90, size = 6),axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-  
+
 Chao1_plot <- ggplot(data=alpha_diversity_data)+
   geom_point(aes(x=alpha_diversity_data$alpha_diversity_names, y=alpha_diversity_data$Chao1), fill="grey", color = "black",shape=21, size = 2)+
   geom_hline(aes(yintercept=median(alpha_diversity_data$Chao1, na.rm=TRUE)),linetype="dotted",color="red")+
@@ -246,6 +255,8 @@ Peilous_J_plot <- ggplot(data=alpha_diversity_data)+
   theme_bw()+
   theme(axis.title.x=element_blank(),axis.text.x = element_text(angle = 90, size = 6),axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
 
+try({
+
 #Make pdf of alpha diversity scatterplots
 pdf("MetaPop/12.Visualizations/alpha_diversity_scatterplots.pdf", width = 16, height = 16/3)
 
@@ -259,8 +270,9 @@ print(ACE_plot)
 print(InvSimpson_plot)
 print(Fisher_plot)
 
-
 dev.off()
+
+})
 
 
 #Calculate beta-diversity metrics
@@ -280,296 +292,314 @@ if(ncol(clr_euc) < 3){
   print("There will be data outputs for these analyses in MetaPop/11.Macrodiversity/, but no visualizations.")
   print("As these outputs are distances, there is not much meaning in the data output.")
 }else{
-
-#Make PCA plots of all beta-diversity metrics
-clr_euc.pca<-prcomp(clr_euc, scale = TRUE)
-clr_euc.eig2 <- eigenvals(clr_euc.pca)
-clr_euc.percentage_variance_explained <- clr_euc.eig2 / sum(clr_euc.eig2)
-clr_euc.PC1_percent <- as.numeric(format(round((clr_euc.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
-clr_euc.PC2_percent <- as.numeric(format(round((clr_euc.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
-clr_euc.PC1_percent= sprintf("%.2f%%", clr_euc.PC1_percent)
-clr_euc.PC2_percent= sprintf("%.2f%%", clr_euc.PC2_percent)
-clr_euc.PC1_percent= paste ("PC1 (",clr_euc.PC1_percent,")")
-clr_euc.PC2_percent= paste ("PC2 (",clr_euc.PC2_percent,")")
-clr_euc.components <- as.data.frame(clr_euc.pca$x)
-clr_euc.components.richness <- as.data.frame(cbind(clr_euc.components, alpha_diversity)) ##add alpha diversity values
-
-CLR_EUC_PCA_PLOT <- ggplot(data=clr_euc.components.richness)+
-  geom_point(aes(x=clr_euc.components.richness$PC1, y=clr_euc.components.richness$PC2, fill=clr_euc.components.richness$Observed), color = "black",shape=21, size = 4)+
-  scale_fill_gradientn(colours = terrain.colors(10))+
-  ggtitle("Centered-log Ratio Transformed Euclidean Distances")+
-  labs(fill = "Species Richness")+xlab(clr_euc.PC1_percent)+
-  ylab(clr_euc.PC2_percent)+
-  theme_bw()+
-  xlim(c(min(c(clr_euc.components.richness$PC1, clr_euc.components.richness$PC2), na.rm=T), max(c(clr_euc.components.richness$PC1, clr_euc.components.richness$PC2), na.rm = T))) +
-  ylim(c(min(c(clr_euc.components.richness$PC1, clr_euc.components.richness$PC2), na.rm=T), max(c(clr_euc.components.richness$PC1, clr_euc.components.richness$PC2), na.rm = T))) +
-  coord_fixed() +
-  theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-
-bray.pca<-prcomp(bray, scale = TRUE)
-bray.eig2 <- eigenvals(bray.pca)
-bray.percentage_variance_explained <- bray.eig2 / sum(bray.eig2)
-bray.PC1_percent <- as.numeric(format(round((bray.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
-bray.PC2_percent <- as.numeric(format(round((bray.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
-bray.PC1_percent= sprintf("%.2f%%", bray.PC1_percent)
-bray.PC2_percent= sprintf("%.2f%%", bray.PC2_percent)
-bray.PC1_percent= paste ("PC1 (",bray.PC1_percent,")")
-bray.PC2_percent= paste ("PC2 (",bray.PC2_percent,")")
-bray.components <- as.data.frame(bray.pca$x)
-bray.components.richness <- as.data.frame(cbind(bray.components, alpha_diversity)) ##add alpha diversity values
-
-BRAY_PCA_PLOT <- ggplot(data=bray.components.richness)+
-  geom_point(aes(x=bray.components.richness$PC1, y=bray.components.richness$PC2, fill=bray.components.richness$Observed), color = "black",shape=21, size = 4)+
-  scale_fill_gradientn(colours = terrain.colors(10))+
-  ggtitle("Bray-Curtis (Dissimilarity) Distances")+
-  labs(fill = "Species Richness")+xlab(bray.PC1_percent)+
-  ylab(bray.PC2_percent)+
-  theme_bw()+
-  xlim(c(min(c(bray.components.richness$PC1, bray.components.richness$PC2), na.rm=T), max(c(bray.components.richness$PC1, bray.components.richness$PC2), na.rm = T))) +
-  ylim(c(min(c(bray.components.richness$PC1, bray.components.richness$PC2), na.rm=T), max(c(bray.components.richness$PC1, bray.components.richness$PC2), na.rm = T))) +
-  coord_fixed() +
-  theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-
-
-jaccard.pca<-prcomp(jaccard, scale = TRUE)
-jaccard.eig2 <- eigenvals(jaccard.pca)
-jaccard.percentage_variance_explained <- jaccard.eig2 / sum(jaccard.eig2)
-jaccard.PC1_percent <- as.numeric(format(round((jaccard.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
-jaccard.PC2_percent <- as.numeric(format(round((jaccard.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
-jaccard.PC1_percent= sprintf("%.2f%%", jaccard.PC1_percent)
-jaccard.PC2_percent= sprintf("%.2f%%", jaccard.PC2_percent)
-jaccard.PC1_percent= paste ("PC1 (",jaccard.PC1_percent,")")
-jaccard.PC2_percent= paste ("PC2 (",jaccard.PC2_percent,")")
-jaccard.components <- as.data.frame(jaccard.pca$x)
-jaccard.components.richness <- as.data.frame(cbind(jaccard.components, alpha_diversity)) ##add alpha diversity values
-
-JACCARD_PCA_PLOT <- ggplot(data=jaccard.components.richness)+
-  geom_point(aes(x=jaccard.components.richness$PC1, y=jaccard.components.richness$PC2, fill=jaccard.components.richness$Observed), color = "black",shape=21, size = 4)+
-  scale_fill_gradientn(colours = terrain.colors(10))+
-  ggtitle("Jaccard (Similarity) Distances")+
-  labs(fill = "Species Richness")+
-  xlab(jaccard.PC1_percent)+ylab(jaccard.PC2_percent)+
-  theme_bw()+
-  xlim(c(min(c(jaccard.components.richness$PC1, jaccard.components.richness$PC2), na.rm=T), max(c(jaccard.components.richness$PC1, jaccard.components.richness$PC2), na.rm = T))) +
-  ylim(c(min(c(jaccard.components.richness$PC1, jaccard.components.richness$PC2), na.rm=T), max(c(jaccard.components.richness$PC1, jaccard.components.richness$PC2), na.rm = T))) +
-  coord_fixed() +
-  theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-
-#Make pdf of PCA plots
-pdf("MetaPop/12.Visualizations/PCA_CLR.EUC_BRAY_JACCARD_plot.pdf", width = 9, height = 9)
-print(CLR_EUC_PCA_PLOT)
-print(BRAY_PCA_PLOT)
-print(JACCARD_PCA_PLOT)
-dev.off()
-
-#Make PCOA plots of all beta-diversity metrics
-clr_euc.pcoa<-capscale(clr_euc~-1)
-clr_euc.eig2 <- eigenvals(clr_euc.pcoa)
-clr_euc.percentage_variance_explained <- clr_euc.eig2 / sum(clr_euc.eig2)
-clr_euc.PC1_percent <- as.numeric(format(round((clr_euc.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
-clr_euc.PC2_percent <- as.numeric(format(round((clr_euc.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
-clr_euc.PC1_percent= sprintf("%.2f%%", clr_euc.PC1_percent)
-clr_euc.PC2_percent= sprintf("%.2f%%", clr_euc.PC2_percent)
-clr_euc.PC1_percent= paste ("PCo1 (",clr_euc.PC1_percent,")")
-clr_euc.PC2_percent= paste ("PCo2 (",clr_euc.PC2_percent,")")
-clr_euc.components <- as.data.frame(scores(clr_euc.pcoa, display=c("sites")))
-clr_euc.components.richness <- as.data.frame(cbind(clr_euc.components, alpha_diversity)) ##add alpha diversity values
-
-CLR_EUC_PCOA_PLOT <- ggplot(data=clr_euc.components.richness)+
-  geom_point(aes(x=clr_euc.components.richness$MDS1, y=clr_euc.components.richness$MDS2, fill=clr_euc.components.richness$Observed), color = "black",shape=21, size = 4)+
-  scale_fill_gradientn(colours = terrain.colors(10))+
-  ggtitle("Centered-log Ratio Transformed Euclidean Distances")+
-  labs(fill = "Species Richness")+
-  xlab(clr_euc.PC1_percent)+
-  ylab(clr_euc.PC2_percent)+
-  theme_bw()+
-  xlim(c(min(c(clr_euc.components.richness$MDS1, clr_euc.components.richness$MDS2), na.rm=T), max(c(clr_euc.components.richness$MDS1, clr_euc.components.richness$MDS2), na.rm = T))) +
-  ylim(c(min(c(clr_euc.components.richness$MDS1, clr_euc.components.richness$MDS2), na.rm=T), max(c(clr_euc.components.richness$MDS1, clr_euc.components.richness$MDS2), na.rm = T))) +
-  coord_fixed() +
-  theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-
-
-bray.pcoa<-capscale(bray~-1)
-bray.eig2 <- eigenvals(bray.pcoa)
-bray.percentage_variance_explained <- bray.eig2 / sum(bray.eig2)
-bray.PC1_percent <- as.numeric(format(round((bray.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
-bray.PC2_percent <- as.numeric(format(round((bray.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
-bray.PC1_percent= sprintf("%.2f%%", bray.PC1_percent)
-bray.PC2_percent= sprintf("%.2f%%", bray.PC2_percent)
-bray.PC1_percent= paste ("PCo1 (",bray.PC1_percent,")")
-bray.PC2_percent= paste ("PCo2 (",bray.PC2_percent,")")
-bray.components <- as.data.frame(scores(bray.pcoa, display=c("sites")))
-bray.components.richness <- as.data.frame(cbind(bray.components, alpha_diversity)) ##add alpha diversity values
-
-BRAY_PCOA_PLOT <- ggplot(data=bray.components.richness)+
-  geom_point(aes(x=bray.components.richness$MDS1, y=bray.components.richness$MDS2, fill=bray.components.richness$Observed), color = "black",shape=21, size = 4)+
-  scale_fill_gradientn(colours = terrain.colors(10))+
-  ggtitle("Bray-Curtis (Dissimilarity) Distances")+
-  labs(fill = "Species Richness")+
-  xlab(bray.PC1_percent)+
-  ylab(bray.PC2_percent)+
-  theme_bw()+
-  xlim(c(min(c(bray.components.richness$MDS1, bray.components.richness$MDS2), na.rm=T), max(c(bray.components.richness$MDS1, bray.components.richness$MDS2), na.rm = T))) +
-  ylim(c(min(c(bray.components.richness$MDS1, bray.components.richness$MDS2), na.rm=T), max(c(bray.components.richness$MDS1, bray.components.richness$MDS2), na.rm = T))) +
-  coord_fixed() +
-  theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-
-
-jaccard.pcoa<-capscale(jaccard~-1)
-jaccard.eig2 <- eigenvals(jaccard.pcoa)
-jaccard.percentage_variance_explained <- jaccard.eig2 / sum(jaccard.eig2)
-jaccard.PC1_percent <- as.numeric(format(round((jaccard.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
-jaccard.PC2_percent <- as.numeric(format(round((jaccard.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
-jaccard.PC1_percent= sprintf("%.2f%%", jaccard.PC1_percent)
-jaccard.PC2_percent= sprintf("%.2f%%", jaccard.PC2_percent)
-jaccard.PC1_percent= paste ("PCo1 (",jaccard.PC1_percent,")")
-jaccard.PC2_percent= paste ("PCo2 (",jaccard.PC2_percent,")")
-jaccard.components <- as.data.frame(scores(jaccard.pcoa, display=c("sites")))
-jaccard.components.richness <- as.data.frame(cbind(jaccard.components, alpha_diversity)) ##add alpha diversity values
-
-JACCARD_PCOA_PLOT <- ggplot(data=jaccard.components.richness)+
-  geom_point(aes(x=jaccard.components.richness$MDS1, y=jaccard.components.richness$MDS2, fill=jaccard.components.richness$Observed), color = "black",shape=21, size = 4)+
-  scale_fill_gradientn(colours = terrain.colors(10))+
-  ggtitle("Jaccard (Similarity) Distances")+
-  labs(fill = "Species Richness")+
-  xlab(jaccard.PC1_percent)+
-  ylab(jaccard.PC2_percent)+
-  theme_bw()+
-  xlim(c(min(c(jaccard.components.richness$MDS1, jaccard.components.richness$MDS2), na.rm=T), max(c(jaccard.components.richness$MDS1, jaccard.components.richness$MDS2), na.rm = T))) +
-  ylim(c(min(c(jaccard.components.richness$MDS1, jaccard.components.richness$MDS2), na.rm=T), max(c(jaccard.components.richness$MDS1, jaccard.components.richness$MDS2), na.rm = T))) +
-  coord_fixed() +
-  theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-
-#Make pdf of PCoA plots
-pdf("MetaPop/12.Visualizations/PCoA_CLR.EUC_BRAY_JACCARD_plot.pdf", width = 9, height = 9)
-print(CLR_EUC_PCOA_PLOT)
-print(BRAY_PCOA_PLOT)
-print(JACCARD_PCOA_PLOT)
-dev.off()
-
-#Make NMDS plots of all beta-diversity metrics
-clr_euc.nmds<-metaMDS(clr_euc, k=2)
-clr_euc.stress <- clr_euc.nmds$stress
-clr_euc.stress= sprintf("%#.3f", clr_euc.stress)
-clr_euc.stress = paste ("stress = ",clr_euc.stress,"")
-clr_euc.points <- clr_euc.nmds$points 
-clr_euc.points.richness <- as.data.frame(cbind(clr_euc.points, alpha_diversity)) ##add alpha diversity values
-
-CLR_EUC_NMDS_PLOT <- ggplot(data=clr_euc.points.richness)+
-  geom_point(aes(x=clr_euc.points.richness$MDS1, y=clr_euc.points.richness$MDS2, fill=clr_euc.components.richness$Observed), color = "black",shape=21, size = 4)+
-  annotate(geom = 'text', label = clr_euc.stress, x = -Inf, y = Inf, hjust = 0, vjust = 1)+scale_fill_gradientn(colours = terrain.colors(10))+
-  ggtitle("Centered-log Ratio Transformed Euclidean Distances")+
-  labs(fill = "Species Richness")+xlab("NMDS1")+
-  ylab("NMDS2")+
-  theme_bw()+
-  theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  xlim(min(c(clr_euc.points.richness$MDS1, clr_euc.points.richness$MDS2), na.rm = T),  max(c(clr_euc.points.richness$MDS1, clr_euc.points.richness$MDS2), na.rm = T)) +
-  ylim(min(c(clr_euc.points.richness$MDS1, clr_euc.points.richness$MDS2), na.rm = T),  max(c(clr_euc.points.richness$MDS1, clr_euc.points.richness$MDS2), na.rm = T)) +
-  coord_fixed()
   
-
-
-bray.nmds<-metaMDS(bray, k=2)
-bray.stress <- bray.nmds$stress
-bray.stress= sprintf("%#.3f", bray.stress)
-bray.stress = paste ("stress = ",bray.stress,"")
-bray.points <- bray.nmds$points 
-bray.points.richness <- as.data.frame(cbind(bray.points, alpha_diversity)) ##add alpha diversity values
-
-BRAY_NMDS_PLOT <- ggplot(data=bray.points.richness)+
-  geom_point(aes(x=bray.points.richness$MDS1, y=bray.points.richness$MDS2, fill=bray.components.richness$Observed), color = "black",shape=21, size = 4)+
-  annotate(geom = 'text', label = bray.stress, x = -Inf, y = Inf, hjust = 0, vjust = 1)+
-  scale_fill_gradientn(colours = terrain.colors(10))+
-  ggtitle("Bray-Curtis (Dissimilarity) Distances")+
-  labs(fill = "Species Richness")+
-  xlab("NMDS1")+
-  ylab("NMDS2")+
-  theme_bw()+
-  theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  xlim(min(c(bray.points.richness$MDS1, bray.points.richness$MDS2), na.rm = T),  max(c(bray.points.richness$MDS1, bray.points.richness$MDS2), na.rm = T)) +
-  ylim(min(c(bray.points.richness$MDS1, bray.points.richness$MDS2), na.rm = T),  max(c(bray.points.richness$MDS1, bray.points.richness$MDS2), na.rm = T)) +
-  coord_fixed()
-
-
-jaccard.nmds<-metaMDS(jaccard, k=2)
-jaccard.stress <- jaccard.nmds$stress
-jaccard.stress= sprintf("%#.3f", jaccard.stress)
-jaccard.stress = paste ("stress = ",jaccard.stress,"")
-jaccard.points <- jaccard.nmds$points 
-jaccard.points.richness <- as.data.frame(cbind(jaccard.points, alpha_diversity)) ##add alpha diversity values
-
-JACCARD_NMDS_PLOT <- ggplot(data=jaccard.points.richness)+
-  geom_point(aes(x=jaccard.points.richness$MDS1, y=jaccard.points.richness$MDS2, fill=jaccard.components.richness$Observed), color = "black",shape=21, size = 4)+
-  annotate(geom = 'text', label = jaccard.stress, x = -Inf, y = Inf, hjust = 0, vjust = 1)+
-  scale_fill_gradientn(colours = terrain.colors(10))+
-  ggtitle("Jaccard (Similarity) Distances")+
-  labs(fill = "Species Richness")+
-  xlab("NMDS1")+
-  ylab("NMDS2")+
-  theme_bw()+
-  theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  xlim(min(c(jaccard.points.richness$MDS1, jaccard.points.richness$MDS2), na.rm = T),  max(c(jaccard.points.richness$MDS1, jaccard.points.richness$MDS2), na.rm = T)) +
-  ylim(min(c(jaccard.points.richness$MDS1, jaccard.points.richness$MDS2), na.rm = T),  max(c(jaccard.points.richness$MDS1, jaccard.points.richness$MDS2), na.rm = T)) +
-  coord_fixed()
-
-
-#Make pdf of NMDS plots
-pdf("MetaPop/12.Visualizations/NMDS_CLR.EUC_BRAY_JACCARD_plot.pdf", width = 9, height = 9)
-par(pty="s")
-print(CLR_EUC_NMDS_PLOT)
-print(BRAY_NMDS_PLOT)
-print(JACCARD_NMDS_PLOT)
-dev.off()
-
+  #Make PCA plots of all beta-diversity metrics
+  clr_euc.pca<-prcomp(clr_euc, scale = TRUE)
+  clr_euc.eig2 <- eigenvals(clr_euc.pca)
+  clr_euc.percentage_variance_explained <- clr_euc.eig2 / sum(clr_euc.eig2)
+  clr_euc.PC1_percent <- as.numeric(format(round((clr_euc.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
+  clr_euc.PC2_percent <- as.numeric(format(round((clr_euc.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
+  clr_euc.PC1_percent= sprintf("%.2f%%", clr_euc.PC1_percent)
+  clr_euc.PC2_percent= sprintf("%.2f%%", clr_euc.PC2_percent)
+  clr_euc.PC1_percent= paste ("PC1 (",clr_euc.PC1_percent,")")
+  clr_euc.PC2_percent= paste ("PC2 (",clr_euc.PC2_percent,")")
+  clr_euc.components <- as.data.frame(clr_euc.pca$x)
+  clr_euc.components.richness <- as.data.frame(cbind(clr_euc.components, alpha_diversity)) ##add alpha diversity values
+  
+  CLR_EUC_PCA_PLOT <- ggplot(data=clr_euc.components.richness)+
+    geom_label_repel(data=clr_euc.components.richness,aes(x=clr_euc.components.richness$PC1, y=clr_euc.components.richness$PC2, label=rownames(clr_euc.components.richness)))+
+    geom_point(aes(x=clr_euc.components.richness$PC1, y=clr_euc.components.richness$PC2, fill=clr_euc.components.richness$Observed), color = "black",shape=21, size = 4)+
+    scale_fill_gradientn(colours = terrain.colors(10))+
+    ggtitle("Centered-log Ratio Transformed Euclidean Distances")+
+    labs(fill = "Species Richness")+xlab(clr_euc.PC1_percent)+
+    ylab(clr_euc.PC2_percent)+
+    theme_bw()+
+    xlim(c(min(c(clr_euc.components.richness$PC1, clr_euc.components.richness$PC2), na.rm=T), max(c(clr_euc.components.richness$PC1, clr_euc.components.richness$PC2), na.rm = T))) +
+    ylim(c(min(c(clr_euc.components.richness$PC1, clr_euc.components.richness$PC2), na.rm=T), max(c(clr_euc.components.richness$PC1, clr_euc.components.richness$PC2), na.rm = T))) +
+    coord_fixed() +
+    theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+  
+  bray.pca<-prcomp(bray, scale = TRUE)
+  bray.eig2 <- eigenvals(bray.pca)
+  bray.percentage_variance_explained <- bray.eig2 / sum(bray.eig2)
+  bray.PC1_percent <- as.numeric(format(round((bray.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
+  bray.PC2_percent <- as.numeric(format(round((bray.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
+  bray.PC1_percent= sprintf("%.2f%%", bray.PC1_percent)
+  bray.PC2_percent= sprintf("%.2f%%", bray.PC2_percent)
+  bray.PC1_percent= paste ("PC1 (",bray.PC1_percent,")")
+  bray.PC2_percent= paste ("PC2 (",bray.PC2_percent,")")
+  bray.components <- as.data.frame(bray.pca$x)
+  bray.components.richness <- as.data.frame(cbind(bray.components, alpha_diversity)) ##add alpha diversity values
+  
+  BRAY_PCA_PLOT <- ggplot(data=bray.components.richness)+
+    geom_label_repel(data=bray.components.richness,aes(x=bray.components.richness$PC1, y=bray.components.richness$PC2, label=rownames(bray.components.richness)))+
+    geom_point(aes(x=bray.components.richness$PC1, y=bray.components.richness$PC2, fill=bray.components.richness$Observed), color = "black",shape=21, size = 4)+
+    scale_fill_gradientn(colours = terrain.colors(10))+
+    ggtitle("Bray-Curtis (Dissimilarity) Distances")+
+    labs(fill = "Species Richness")+xlab(bray.PC1_percent)+
+    ylab(bray.PC2_percent)+
+    theme_bw()+
+    xlim(c(min(c(bray.components.richness$PC1, bray.components.richness$PC2), na.rm=T), max(c(bray.components.richness$PC1, bray.components.richness$PC2), na.rm = T))) +
+    ylim(c(min(c(bray.components.richness$PC1, bray.components.richness$PC2), na.rm=T), max(c(bray.components.richness$PC1, bray.components.richness$PC2), na.rm = T))) +
+    coord_fixed() +
+    theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+  
+  jaccard.pca<-prcomp(jaccard, scale = TRUE)
+  jaccard.eig2 <- eigenvals(jaccard.pca)
+  jaccard.percentage_variance_explained <- jaccard.eig2 / sum(jaccard.eig2)
+  jaccard.PC1_percent <- as.numeric(format(round((jaccard.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
+  jaccard.PC2_percent <- as.numeric(format(round((jaccard.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
+  jaccard.PC1_percent= sprintf("%.2f%%", jaccard.PC1_percent)
+  jaccard.PC2_percent= sprintf("%.2f%%", jaccard.PC2_percent)
+  jaccard.PC1_percent= paste ("PC1 (",jaccard.PC1_percent,")")
+  jaccard.PC2_percent= paste ("PC2 (",jaccard.PC2_percent,")")
+  jaccard.components <- as.data.frame(jaccard.pca$x)
+  jaccard.components.richness <- as.data.frame(cbind(jaccard.components, alpha_diversity)) ##add alpha diversity values
+  
+  JACCARD_PCA_PLOT <- ggplot(data=jaccard.components.richness)+
+    geom_label_repel(data=jaccard.components.richness,aes(x=jaccard.components.richness$PC1, y=jaccard.components.richness$PC2, label=rownames(jaccard.components.richness)))+
+    geom_point(aes(x=jaccard.components.richness$PC1, y=jaccard.components.richness$PC2, fill=jaccard.components.richness$Observed), color = "black",shape=21, size = 4)+
+    scale_fill_gradientn(colours = terrain.colors(10))+
+    ggtitle("Jaccard (Similarity) Distances")+
+    labs(fill = "Species Richness")+
+    xlab(jaccard.PC1_percent)+ylab(jaccard.PC2_percent)+
+    theme_bw()+
+    xlim(c(min(c(jaccard.components.richness$PC1, jaccard.components.richness$PC2), na.rm=T), max(c(jaccard.components.richness$PC1, jaccard.components.richness$PC2), na.rm = T))) +
+    ylim(c(min(c(jaccard.components.richness$PC1, jaccard.components.richness$PC2), na.rm=T), max(c(jaccard.components.richness$PC1, jaccard.components.richness$PC2), na.rm = T))) +
+    coord_fixed() +
+    theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+  
+  
+  try({
+  
+  #Make pdf of PCA plots
+  pdf("MetaPop/12.Visualizations/PCA_CLR.EUC_BRAY_JACCARD_plot.pdf", width = 9, height = 9)
+  print(CLR_EUC_PCA_PLOT)
+  print(BRAY_PCA_PLOT)
+  print(JACCARD_PCA_PLOT)
+  dev.off()
+  
+  })
+  
+  #Make PCOA plots of all beta-diversity metrics
+  clr_euc.pcoa<-capscale(clr_euc~-1)
+  clr_euc.eig2 <- eigenvals(clr_euc.pcoa)
+  clr_euc.percentage_variance_explained <- clr_euc.eig2 / sum(clr_euc.eig2)
+  clr_euc.PC1_percent <- as.numeric(format(round((clr_euc.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
+  clr_euc.PC2_percent <- as.numeric(format(round((clr_euc.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
+  clr_euc.PC1_percent= sprintf("%.2f%%", clr_euc.PC1_percent)
+  clr_euc.PC2_percent= sprintf("%.2f%%", clr_euc.PC2_percent)
+  clr_euc.PC1_percent= paste ("PCo1 (",clr_euc.PC1_percent,")")
+  clr_euc.PC2_percent= paste ("PCo2 (",clr_euc.PC2_percent,")")
+  clr_euc.components <- as.data.frame(scores(clr_euc.pcoa, display=c("sites")))
+  clr_euc.components.richness <- as.data.frame(cbind(clr_euc.components, alpha_diversity)) ##add alpha diversity values
+  
+  CLR_EUC_PCOA_PLOT <- ggplot(data=clr_euc.components.richness)+
+    geom_label_repel(data=clr_euc.components.richness,aes(x=clr_euc.components.richness$MDS1, y=clr_euc.components.richness$MDS2, label=rownames(clr_euc.components.richness)))+
+    geom_point(aes(x=clr_euc.components.richness$MDS1, y=clr_euc.components.richness$MDS2, fill=clr_euc.components.richness$Observed), color = "black",shape=21, size = 4)+
+    scale_fill_gradientn(colours = terrain.colors(10))+
+    ggtitle("Centered-log Ratio Transformed Euclidean Distances")+
+    labs(fill = "Species Richness")+
+    xlab(clr_euc.PC1_percent)+
+    ylab(clr_euc.PC2_percent)+
+    theme_bw()+
+    xlim(c(min(c(clr_euc.components.richness$MDS1, clr_euc.components.richness$MDS2), na.rm=T), max(c(clr_euc.components.richness$MDS1, clr_euc.components.richness$MDS2), na.rm = T))) +
+    ylim(c(min(c(clr_euc.components.richness$MDS1, clr_euc.components.richness$MDS2), na.rm=T), max(c(clr_euc.components.richness$MDS1, clr_euc.components.richness$MDS2), na.rm = T))) +
+    coord_fixed() +
+    theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+  
+  
+  bray.pcoa<-capscale(bray~-1)
+  bray.eig2 <- eigenvals(bray.pcoa)
+  bray.percentage_variance_explained <- bray.eig2 / sum(bray.eig2)
+  bray.PC1_percent <- as.numeric(format(round((bray.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
+  bray.PC2_percent <- as.numeric(format(round((bray.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
+  bray.PC1_percent= sprintf("%.2f%%", bray.PC1_percent)
+  bray.PC2_percent= sprintf("%.2f%%", bray.PC2_percent)
+  bray.PC1_percent= paste ("PCo1 (",bray.PC1_percent,")")
+  bray.PC2_percent= paste ("PCo2 (",bray.PC2_percent,")")
+  bray.components <- as.data.frame(scores(bray.pcoa, display=c("sites")))
+  bray.components.richness <- as.data.frame(cbind(bray.components, alpha_diversity)) ##add alpha diversity values
+  
+  BRAY_PCOA_PLOT <- ggplot(data=bray.components.richness)+
+    geom_label_repel(data=bray.components.richness,aes(x=bray.components.richness$MDS1, y=bray.components.richness$MDS2, label=rownames(bray.components.richness)))+
+    geom_point(aes(x=bray.components.richness$MDS1, y=bray.components.richness$MDS2, fill=bray.components.richness$Observed), color = "black",shape=21, size = 4)+
+    scale_fill_gradientn(colours = terrain.colors(10))+
+    ggtitle("Bray-Curtis (Dissimilarity) Distances")+
+    labs(fill = "Species Richness")+
+    xlab(bray.PC1_percent)+
+    ylab(bray.PC2_percent)+
+    theme_bw()+
+    xlim(c(min(c(bray.components.richness$MDS1, bray.components.richness$MDS2), na.rm=T), max(c(bray.components.richness$MDS1, bray.components.richness$MDS2), na.rm = T))) +
+    ylim(c(min(c(bray.components.richness$MDS1, bray.components.richness$MDS2), na.rm=T), max(c(bray.components.richness$MDS1, bray.components.richness$MDS2), na.rm = T))) +
+    coord_fixed() +
+    theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+  
+  
+  jaccard.pcoa<-capscale(jaccard~-1)
+  jaccard.eig2 <- eigenvals(jaccard.pcoa)
+  jaccard.percentage_variance_explained <- jaccard.eig2 / sum(jaccard.eig2)
+  jaccard.PC1_percent <- as.numeric(format(round((jaccard.percentage_variance_explained[[1]]*100), 2), nsmall = 2))
+  jaccard.PC2_percent <- as.numeric(format(round((jaccard.percentage_variance_explained[[2]]*100), 2), nsmall = 2))
+  jaccard.PC1_percent= sprintf("%.2f%%", jaccard.PC1_percent)
+  jaccard.PC2_percent= sprintf("%.2f%%", jaccard.PC2_percent)
+  jaccard.PC1_percent= paste ("PCo1 (",jaccard.PC1_percent,")")
+  jaccard.PC2_percent= paste ("PCo2 (",jaccard.PC2_percent,")")
+  jaccard.components <- as.data.frame(scores(jaccard.pcoa, display=c("sites")))
+  jaccard.components.richness <- as.data.frame(cbind(jaccard.components, alpha_diversity)) ##add alpha diversity values
+  
+  JACCARD_PCOA_PLOT <- ggplot(data=jaccard.components.richness)+
+    geom_label_repel(data=jaccard.components.richness,aes(x=jaccard.components.richness$MDS1, y=jaccard.components.richness$MDS2, label=rownames(jaccard.components.richness)))+
+    geom_point(aes(x=jaccard.components.richness$MDS1, y=jaccard.components.richness$MDS2, fill=jaccard.components.richness$Observed), color = "black",shape=21, size = 4)+
+    scale_fill_gradientn(colours = terrain.colors(10))+
+    ggtitle("Jaccard (Similarity) Distances")+
+    labs(fill = "Species Richness")+
+    xlab(jaccard.PC1_percent)+
+    ylab(jaccard.PC2_percent)+
+    theme_bw()+
+    xlim(c(min(c(jaccard.components.richness$MDS1, jaccard.components.richness$MDS2), na.rm=T), max(c(jaccard.components.richness$MDS1, jaccard.components.richness$MDS2), na.rm = T))) +
+    ylim(c(min(c(jaccard.components.richness$MDS1, jaccard.components.richness$MDS2), na.rm=T), max(c(jaccard.components.richness$MDS1, jaccard.components.richness$MDS2), na.rm = T))) +
+    coord_fixed() +
+    theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+  
+  try({
+  
+  #Make pdf of PCoA plots
+  pdf("MetaPop/12.Visualizations/PCoA_CLR.EUC_BRAY_JACCARD_plot.pdf", width = 9, height = 9)
+  print(CLR_EUC_PCOA_PLOT)
+  print(BRAY_PCOA_PLOT)
+  print(JACCARD_PCOA_PLOT)
+  dev.off()
+  
+  })
+  
+  #Make NMDS plots of all beta-diversity metrics
+  clr_euc.nmds<-metaMDS(clr_euc, k=2)
+  clr_euc.stress <- clr_euc.nmds$stress
+  clr_euc.stress= sprintf("%#.3f", clr_euc.stress)
+  clr_euc.stress = paste ("stress = ",clr_euc.stress,"")
+  clr_euc.points <- clr_euc.nmds$points 
+  clr_euc.points.richness <- as.data.frame(cbind(clr_euc.points, alpha_diversity)) ##add alpha diversity values
+  
+  CLR_EUC_NMDS_PLOT <- ggplot(data=clr_euc.points.richness)+
+    geom_label_repel(data=clr_euc.components.richness,aes(x=clr_euc.components.richness$MDS1, y=clr_euc.components.richness$MDS2, label=rownames(clr_euc.components.richness)))+
+    geom_point(aes(x=clr_euc.points.richness$MDS1, y=clr_euc.points.richness$MDS2, fill=clr_euc.components.richness$Observed), color = "black",shape=21, size = 4)+
+    annotate(geom = 'text', label = clr_euc.stress, x = -Inf, y = Inf, hjust = 0, vjust = 1)+scale_fill_gradientn(colours = terrain.colors(10))+
+    ggtitle("Centered-log Ratio Transformed Euclidean Distances")+
+    labs(fill = "Species Richness")+xlab("NMDS1")+
+    ylab("NMDS2")+
+    theme_bw()+
+    theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+    xlim(min(c(clr_euc.points.richness$MDS1, clr_euc.points.richness$MDS2), na.rm = T),  max(c(clr_euc.points.richness$MDS1, clr_euc.points.richness$MDS2), na.rm = T)) +
+    ylim(min(c(clr_euc.points.richness$MDS1, clr_euc.points.richness$MDS2), na.rm = T),  max(c(clr_euc.points.richness$MDS1, clr_euc.points.richness$MDS2), na.rm = T)) +
+    coord_fixed()
+  
+  
+  
+  bray.nmds<-metaMDS(bray, k=2)
+  bray.stress <- bray.nmds$stress
+  bray.stress= sprintf("%#.3f", bray.stress)
+  bray.stress = paste ("stress = ",bray.stress,"")
+  bray.points <- bray.nmds$points 
+  bray.points.richness <- as.data.frame(cbind(bray.points, alpha_diversity)) ##add alpha diversity values
+  
+  BRAY_NMDS_PLOT <- ggplot(data=bray.points.richness)+
+    geom_label_repel(data=bray.components.richness,aes(x=bray.components.richness$MDS1, y=bray.components.richness$MDS2, label=rownames(bray.components.richness)))+
+    geom_point(aes(x=bray.points.richness$MDS1, y=bray.points.richness$MDS2, fill=bray.components.richness$Observed), color = "black",shape=21, size = 4)+
+    annotate(geom = 'text', label = bray.stress, x = -Inf, y = Inf, hjust = 0, vjust = 1)+
+    scale_fill_gradientn(colours = terrain.colors(10))+
+    ggtitle("Bray-Curtis (Dissimilarity) Distances")+
+    labs(fill = "Species Richness")+
+    xlab("NMDS1")+
+    ylab("NMDS2")+
+    theme_bw()+
+    theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+    xlim(min(c(bray.points.richness$MDS1, bray.points.richness$MDS2), na.rm = T),  max(c(bray.points.richness$MDS1, bray.points.richness$MDS2), na.rm = T)) +
+    ylim(min(c(bray.points.richness$MDS1, bray.points.richness$MDS2), na.rm = T),  max(c(bray.points.richness$MDS1, bray.points.richness$MDS2), na.rm = T)) +
+    coord_fixed()
+  
+  
+  jaccard.nmds<-metaMDS(jaccard, k=2)
+  jaccard.stress <- jaccard.nmds$stress
+  jaccard.stress= sprintf("%#.3f", jaccard.stress)
+  jaccard.stress = paste ("stress = ",jaccard.stress,"")
+  jaccard.points <- jaccard.nmds$points 
+  jaccard.points.richness <- as.data.frame(cbind(jaccard.points, alpha_diversity)) ##add alpha diversity values
+  
+  JACCARD_NMDS_PLOT <- ggplot(data=jaccard.points.richness)+
+    geom_label_repel(data=jaccard.components.richness,aes(x=jaccard.components.richness$MDS1, y=jaccard.components.richness$MDS2, label=rownames(jaccard.components.richness)))+
+    geom_point(aes(x=jaccard.points.richness$MDS1, y=jaccard.points.richness$MDS2, fill=jaccard.components.richness$Observed), color = "black",shape=21, size = 4)+
+    annotate(geom = 'text', label = jaccard.stress, x = -Inf, y = Inf, hjust = 0, vjust = 1)+
+    scale_fill_gradientn(colours = terrain.colors(10))+
+    ggtitle("Jaccard (Similarity) Distances")+
+    labs(fill = "Species Richness")+
+    xlab("NMDS1")+
+    ylab("NMDS2")+
+    theme_bw()+
+    theme(axis.line.x = element_line(color="black", size = 0.5),axis.line.y = element_line(color="black", size = 0.5),panel.border = element_blank(),panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+    xlim(min(c(jaccard.points.richness$MDS1, jaccard.points.richness$MDS2), na.rm = T),  max(c(jaccard.points.richness$MDS1, jaccard.points.richness$MDS2), na.rm = T)) +
+    ylim(min(c(jaccard.points.richness$MDS1, jaccard.points.richness$MDS2), na.rm = T),  max(c(jaccard.points.richness$MDS1, jaccard.points.richness$MDS2), na.rm = T)) +
+    coord_fixed()
+  
+  try({
+  #Make pdf of NMDS plots
+  pdf("MetaPop/12.Visualizations/NMDS_CLR.EUC_BRAY_JACCARD_plot.pdf", width = 9, height = 9)
+  par(pty="s")
+  print(CLR_EUC_NMDS_PLOT)
+  print(BRAY_NMDS_PLOT)
+  print(JACCARD_NMDS_PLOT)
+  dev.off()
+  })
+  
 }
 
 if(length(cov_depth) > 1){
-print("Heatmaps are very memory intensive. MetaPop will attempt to print normalized abundance heatmaps, but these may fail.")
-
-try({
-
-  abundance_matrix_nozero <- abundance_matrix[ rowSums(abundance_matrix)!=0, ]
+  print("Heatmaps are very memory intensive. MetaPop will attempt to print normalized abundance heatmaps, but these may fail.")
   
-  pdf("MetaPop/12.Visualizations/normalized_abundances_heatmap.pdf")
-  
-  pheatmap(abundance_matrix_nozero,
-                     scale="none",
-                     cluster_cols = T,
-                     cluster_rows = T,
-                     show_rownames = F, 
-                     show_colnames = T,
-                     fontsize_col = 5+1/log10(ncol(abundance_matrix)), 
-                     breaks=c(-0.00001,0,seq(0.0000001,max(abundance_matrix),length.out=50)), 
-                     border_color=NA, 
-                     col=c("white",colorRampPalette(brewer.pal(11,"Spectral"))(59)))
-  
-  
-  dev.off()
-
+  try({
+    
+    abundance_matrix_nozero <- abundance_matrix[ rowSums(abundance_matrix)!=0, ]
+    
+    pdf("MetaPop/12.Visualizations/normalized_abundances_heatmap.pdf")
+    
+    pheatmap(abundance_matrix_nozero,
+             scale="none",
+             cluster_cols = T,
+             cluster_rows = T,
+             show_rownames = F, 
+             show_colnames = T,
+             fontsize_col = 5+1/log10(ncol(abundance_matrix)), 
+             breaks=c(-0.00001,0,seq(0.0000001,max(abundance_matrix),length.out=50)), 
+             border_color=NA, 
+             col=c("white",colorRampPalette(brewer.pal(11,"Spectral"))(59)))
+    
+    
+    dev.off()
+    
   })
-
-
-try({
-
-  pheatmap_matrix_nozero <- pheatmap_matrix[ rowSums(pheatmap_matrix)!=0, ]
   
-  pdf("MetaPop/12.Visualizations/normalized_abundances_heatmap_75_quantile_removed.pdf")
   
-  pheatmap(pheatmap_matrix_nozero,
-                     scale="none",
-                     cluster_cols = T,
-                     cluster_rows = T,
-                     show_rownames = F, 
-                     show_colnames = T,
-                     fontsize_col = 5+1/log10(ncol(pheatmap_matrix)), 
-                     breaks=c(-0.00001,0,seq(0.0000001,top_75_quantile[[1]],length.out=50)), 
-                     border_color=NA, 
-                     col=c("white",colorRampPalette(brewer.pal(11,"Spectral"))(59)))
-  
-  dev.off()
-  
+  try({
+    
+    pheatmap_matrix_nozero <- pheatmap_matrix[ rowSums(pheatmap_matrix)!=0, ]
+    
+    pdf("MetaPop/12.Visualizations/normalized_abundances_heatmap_75_quantile_removed.pdf")
+    
+    pheatmap(pheatmap_matrix_nozero,
+             scale="none",
+             cluster_cols = T,
+             cluster_rows = T,
+             show_rownames = F, 
+             show_colnames = T,
+             fontsize_col = 5+1/log10(ncol(pheatmap_matrix)), 
+             breaks=c(-0.00001,0,seq(0.0000001,top_75_quantile[[1]],length.out=50)), 
+             border_color=NA, 
+             col=c("white",colorRampPalette(brewer.pal(11,"Spectral"))(59)))
+    
+    dev.off()
+    
   })
-
+  
 }else{
   print("Cannot make a heatmap with only one sample.")
 }

@@ -30,7 +30,61 @@ snp_scale <- options[10]
 
 setwd(directory_name)
 
-suppressMessages(suppressWarnings(library(Biostrings, lib.loc = library_location)))
+
+get_names_and_lengths_from_fasta <- function(file){
+  
+  original_assemblies <- readLines(file)
+  
+  header_lines = substr(original_assemblies, 1, 1) == ">"
+  
+  seq_ids = original_assemblies[header_lines]
+  
+  char_counts = nchar(original_assemblies)
+  #char_counts[header_lines] = 0
+  
+  rm(original_assemblies)
+  
+  lengths = rep(0, sum(header_lines))
+  
+  current_length = 0
+  headers_count = 1
+  
+  for(i in 2:length(header_lines)){
+    if(header_lines[i]){
+      lengths[headers_count] = current_length
+      headers_count = headers_count + 1
+      current_length = 0
+    }else{
+      current_length = current_length + char_counts[i]
+    }
+    
+  }
+  
+  #Final iter
+  lengths[headers_count] = current_length
+  
+  
+  seq_ids =  substr(seq_ids, 2, nchar(seq_ids ))
+  
+  seq_ids  <- unlist(lapply(seq_ids , function(x){
+    
+    res  = strsplit(x, split = ' ')[[1]]
+    if(length(res) > 1){
+      res = res[1]
+    }
+    
+    return(res)
+    
+  }))
+  
+  result = data.table(seq_ids, lengths)
+  
+  return(result)
+  
+}
+
+#suppressMessages(suppressWarnings(library(Biostrings, lib.loc = library_location)))
+
 suppressMessages(suppressWarnings(library(data.table, lib.loc = library_location)))
 suppressMessages(suppressWarnings(library(ggplot2, lib.loc = library_location)))
 suppressMessages(suppressWarnings(library(gggenes, lib.loc = library_location)))
@@ -206,13 +260,16 @@ dev.off()
 #main genomes
 
 
-if(snp_scale=="local" | snp_scale == "both"){
+parse_genes = function(file){
   
-  print("Creating local scale SNP plots...")
-
-  genes <- readDNAStringSet(ref_genes)
+  genes <- readLines(file)
   
-  s <- strsplit(names(genes), "[# \t]+") # split names by tab/space
+  headers = substr(genes, 1, 1) == ">"
+  
+  genes = genes[headers]
+  genes = substr(genes, 2, nchar(genes))
+  
+  s <- strsplit(genes, "[# \t]+") # split names by tab/space
   genes <- data.table(matrix(unlist(s), ncol=5, byrow=T))
   
   names(genes)[1:4] = c("contig_gene", "start", "end", "OC")
@@ -224,6 +281,17 @@ if(snp_scale=="local" | snp_scale == "both"){
   
   genes$parent_contig <- gsub("_\\d+$", "", genes$contig_gene)
   
+  return(genes)
+  
+}
+
+if(snp_scale=="local" | snp_scale == "both"){
+  
+  print("Creating local scale SNP plots...")
+
+  genes = parse_genes(ref_genes)
+  
+
 gene_microdiv <- fread("MetaPop/10.Microdiversity/local_gene_microdiversity.tsv", sep = "\t")
 
 gene_microdiv$parent_contig <- gsub("_\\d+$", "", gene_microdiv$contig_gene)
@@ -264,9 +332,9 @@ names(gene_microdiv) = NS
 rm(NS)
 
 
-fastaLengths <- readDNAStringSet(ref_fasta)
-fastaLengths <- data.table(contig = names(fastaLengths), num_bases = lengths(fastaLengths))
-fastaLengths$contig <- unlist(lapply(fastaLengths$contig, function(x){return(strsplit(x, split=" ")[[1]][1])}))
+fastaLengths = get_names_and_lengths_from_fasta(ref_fasta)
+colnames(fastaLengths) = c("contig", "num_bases")
+
 
 fastaLengths <- fastaLengths[ contig %in% names(gene_microdiv),]
 
@@ -533,25 +601,13 @@ dev.off()
 
 }
 
+
 if(snp_scale=="global" | snp_scale == "both"){
 
   print("Creating global scale SNP plots...")
   
+  genes = parse_genes(ref_genes)
   
-  genes <- readDNAStringSet(ref_genes)
-  
-  s <- strsplit(names(genes), "[# \t]+") # split names by tab/space
-  genes <- data.table(matrix(unlist(s), ncol=5, byrow=T))
-  
-  names(genes)[1:4] = c("contig_gene", "start", "end", "OC")
-  
-  genes$start <- as.numeric((genes$start))
-  genes$end <- as.numeric((genes$end))
-  
-  genes <- genes[,-5]
-  
-  genes$parent_contig <- gsub("_\\d+$", "", genes$contig_gene)
-    
   gene_microdiv <- fread("MetaPop/10.Microdiversity/global_gene_microdiversity.tsv", sep = "\t")
   
   gene_microdiv$parent_contig <- gsub("_\\d+$", "", gene_microdiv$contig_gene)
@@ -591,10 +647,9 @@ if(snp_scale=="global" | snp_scale == "both"){
   names(gene_microdiv) = NS
   rm(NS)
   
-  
-  fastaLengths <- readDNAStringSet(ref_fasta)
-  fastaLengths <- data.table(contig = names(fastaLengths), num_bases = lengths(fastaLengths))
-  fastaLengths$contig <- unlist(lapply(fastaLengths$contig, function(x){return(strsplit(x, split=" ")[[1]][1])}))
+  fastaLengths = get_names_and_lengths_from_fasta(ref_fasta)
+  colnames(fastaLengths) = c("contig", "length")
+
   
   fastaLengths <- fastaLengths[ contig %in% names(gene_microdiv),]
   

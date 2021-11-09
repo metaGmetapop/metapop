@@ -22,7 +22,7 @@ setwd(directory_name)
 suppressMessages(suppressWarnings(library(doParallel, lib.loc = library_location)))
 suppressMessages(suppressWarnings(library(data.table, lib.loc = library_location)))
 suppressMessages(suppressWarnings(library(ggplot2, lib.loc = library_location)))
-suppressMessages(suppressWarnings(library(Biostrings, lib.loc = library_location)))
+#suppressMessages(suppressWarnings(library(Biostrings, lib.loc = library_location)))
 suppressMessages(suppressWarnings(library(cowplot, lib.loc = library_location)))
 
 
@@ -51,19 +51,34 @@ stopCluster(cl)
 codon_bias_iqr <- fread(list.files(full.names = T, path = "MetaPop/08.Codon_Bias", pattern="gene_IQR_and_mean.tsv"), sep = "\t")
 codon_bias_iqr <- codon_bias_iqr[codon_bias_iqr$parent_contig %in% passing_contigs,]
 
-genes <- readDNAStringSet(ref_genes)
+parse_genes = function(file){
+  
+  genes <- readLines(file)
+  
+  headers = substr(genes, 1, 1) == ">"
+  
+  genes = genes[headers]
+  genes = substr(genes, 2, nchar(genes))
+  
+  s <- strsplit(genes, "[# \t]+") # split names by tab/space
+  genes <- data.table(matrix(unlist(s), ncol=5, byrow=T))
+  
+  names(genes)[1:4] = c("contig_gene", "start", "end", "OC")
+  
+  genes$start <- as.numeric((genes$start))
+  genes$end <- as.numeric((genes$end))
+  
+  genes <- genes[,-5]
+  
+  genes$parent_contig <- gsub("_\\d+$", "", genes$contig_gene)
+  
+  return(genes)
+  
+}
 
-s <- strsplit(names(genes), "[# \t]+") # split names by tab/space
-genes <- data.table(matrix(unlist(s), ncol=5, byrow=T))
 
-names(genes)[1:4] = c("contig_gene", "start", "end", "OC")
+genes = parse_genes(ref_genes)
 
-genes$start <- as.numeric((genes$start))
-genes$end <- as.numeric((genes$end))
-genes <- genes[,-5]
-
-# Figure out what contig they come from, mostly for cleaning purposes
-genes$parent_contig <- gsub("_\\d+$", "", genes$contig_gene)  
 
 genes <- genes[genes$parent_contig %in% passing_contigs,]
 
