@@ -98,7 +98,7 @@ Preprocessing Arguments:<br/>
 `-prodigal` : absolute path to prodigal gene prediction tool - optional if prodigal is in PATH or if -genes specified with existing prodigal FASTA format gene calls.<br/>
 `-genes` : absolute path to prodigal FASTA format gene file for assembled contigs. May be left absent if you want metapop to generate this file. Please note if you supply your own gene file, the header for each gene in the fastea format neeeds to be in prodigal format.<br/><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Prodigal FASTA header format example:<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`>contig1234_1 # 2 # 181 # 1 # ID=1_1;partial=10;start_type=Edge;rbs_motif=None;rbs_spacer=None;gc_cont=0.628`
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`>contig1234_1 # 2 # 181 # 1 # ID=1_1;partial=10;start_type=Edge;rbs_motif=None;rbs_spacer=None;gc_cont=0.628`<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`>contig name_gene number # start position # end position # template(1) or antisense(-1) strand # NA`<br/><br/>
 `-id` INT : reads below this percent identity (mismatch/alignment length) are removed. Use -global to calculate as (mismatch/read length). Default 95.<br/>
 `-min` INT : reads with alignments shorter than this are removed. Default 30.<br/>
