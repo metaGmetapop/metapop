@@ -20,6 +20,9 @@ from datetime import datetime
 import metapop.metapop_helper_functions
 import metapop.metapop_filter
 import metapop.metapop_snp_call
+import metapop.metapop_mine_reads
+import metapop.metapop_fst
+
 
 '''
 MetaPop main script. Manages option input, flow of control, and issuing calls to functionality in other scripts. Prints logs of options.
@@ -45,17 +48,18 @@ def gather_opts():
 	#parser.add_argument("--genomes_are_mags", dest = "is_mag", action = "store_true", help = "The option supplied to --reference is a directory containing 1 or more multiFASTA files, each representing 1 MAG")
 	
 	parser.add_argument("--global", dest = "isglobal", action = "store_true", help = "Calculate pct ID as matches to reference / read length. Default is matches / alignment length")
-	parser.add_argument("--id_min", dest = "min_pct_id", default = 95, help = "Reads below this Pct ID will be removed")
-	parser.add_argument("--min_len", dest = "min_length", default = 50, help = "Minimum read length")
+	parser.add_argument("--id_min", dest = "min_pct_id", default = 95, help = "Reads below this Pct ID will be removed. Default 95")
+	parser.add_argument("--min_len", dest = "min_length", default = 50, help = "Minimum read length. Default 50.")
 	
-	parser.add_argument("--min_cov", dest = "min_cov", default = 20, help = "Minimum percent of genome covered for inclusion")
-	parser.add_argument("--min_dep", dest = "min_dep", default = 10, help = "Minimum truncated average depth (TAD) for inclusion")
-	parser.add_argument("--trunc", dest = "truncation", default = 10, help = "Truncate the highest and lowest n percent of depths per genome when calculating TAD.")
+	parser.add_argument("--min_cov", dest = "min_cov", default = 20, help = "Minimum percent of genome covered for inclusion. Default 20.")
+	parser.add_argument("--min_dep", dest = "min_dep", default = 10, help = "Minimum truncated average depth (TAD) for inclusion. Defualt 10.")
+	parser.add_argument("--trunc", dest = "truncation", default = 10, help = "Truncate the highest and lowest n percent of depths per genome when calculating TAD. Default 10.")
+
 	
 	#bcf/vcf opts
-	parser.add_argument("--min_qual", dest = "min_qual", default = 20, help = "Minimum base call quality for variant calling.")
-	parser.add_argument("--min_obs", dest = "min_obs", default = 2, help = "Minimum number of bases of the minor allele needed to be called a SNP")
-	parser.add_argument("--min_pct", dest = "min_pct", default = 1, help = "Minimum percent of the population the minor allele must represent to be called a SNP.")
+	parser.add_argument("--min_qual", dest = "min_qual", default = 20, help = "Minimum phred score base call quality for variant calling. Default 20.")
+	parser.add_argument("--min_obs", dest = "min_obs", default = 2, help = "Minimum number of bases of the minor allele needed to be called a SNP. Default 2")
+	parser.add_argument("--min_pct", dest = "min_pct", default = 1, help = "Minimum percent of the population the minor allele must represent to be called a SNP. Default 1")
 	
 	#SNP call opts.
 	parser.add_argument("--ref_sample", dest = "reference_sample", default = "", help = "Use this sample as the point of reference for SNP calling. Reference bases will be determined by this sample's consensus base and called positions will be limited to those found in this sample. Supply the name of one of the reference BAM files for this option.")
@@ -64,14 +68,13 @@ def gather_opts():
 	parser.add_argument("--subsample_size", dest = "subsamp", default = 10, help = "Microdiversity subsampling size. Each SNP site will have up to this many bases subsampled for the calculation of microdiversity stats.")
 
 	#macrodiv
-	parser.add_argument("--whole_genomes", dest = "whole_gen", action = 'store_true', help = "Treat references as whole genomes instead of single contigs.")
-	parser.add_argument("--genome_detection_cutoff", dest = "gen_cov_min", default = 0, help = "Percent of bases that must be covered for a sequence to be considered detected for macrodiversity analyses. Use this or --minimum_bases_for_detection, not both.")
-	parser.add_argument("--minimum_bases_for_detection", dest = "min_bp", default = 5000, help = "Count of bases that must be covered for a sequence to be considered detected for macrodiversity analyses. Use this or --genome_detection_cutoff, not both.")
+	parser.add_argument("--whole_genomes", dest = "whole_gen", action = 'store_true', help = "Treat references as whole genomes instead of single contigs. Off by default.")
+	parser.add_argument("--genome_detection_cutoff", dest = "gen_cov_min", default = 0, help = "Percent of bases that must be covered for a sequence to be considered detected for macrodiversity analyses. Use this or --minimum_bases_for_detection, not both. Default 0.")
+	parser.add_argument("--minimum_bases_for_detection", dest = "min_bp", default = 5000, help = "Count of bases that must be covered for a sequence to be considered detected for macrodiversity analyses. Use this or --genome_detection_cutoff, not both. Default 5000.")
 	
 	#preproc_viz
 	parser.add_argument("--plot_all", dest = "plot_all", action = 'store_true', help = "MetaPop normally plots the top 20 genomes with the most genes under selection in microdiversity visualizations. This flag will make MetaPop plot all genomes. Warning: slow.")
 	parser.add_argument("--snp_scale", dest = "snp_scale", default = 'local', help = "Choose one of \'local\', \'global\' or \'both\'. Controls whether SNPs detected for a genome in each sample alone are shown, or SNPs for that genome across all samples.")
-	
 	
 	#misc opts
 	parser.add_argument("--threads", dest = "thds", default = 0, help = "How many threads to use for parallelization.")	
@@ -200,12 +203,19 @@ def main():
 	if not no_mac:
 		if norm_file == "":
 			norm_file = metapop.metapop_helper_functions.produce_default_normalization_file(output_directory_base, original_bams, threads)
+		else:
+			#Produce non-relative path for accessing the normalization file
+			norm_file = os.path.abspath(norm_file)
+			
 	
 	
 	joined_fastas = metapop.metapop_helper_functions.multi_to_single_fasta(output_directory_base, reference_fasta)
 	
 	if reference_genes == "":
 		reference_genes = metapop.metapop_helper_functions.gene_calls(joined_fastas, output_directory_base)
+	else:
+		#Produce non-relative path for accessing the genes file
+		reference_genes = os.path.abspath(reference_genes)
 		
 	#groups each input file with its contained contigs
 	mag_contig_dict, mag_length_dict = metapop.metapop_helper_functions.create_mag_log(reference_fasta, output_directory_base+"/MetaPop/00.Log_and_Parameters/mags.txt", treat_as_mag)
@@ -276,23 +286,39 @@ def main():
 				joined_fastas, reference_genes = joined_fastas[(len(output_directory_base)+1):], reference_genes[(len(output_directory_base)+1):]
 			
 			metapop.metapop_helper_functions.micro_prep(output_directory_base)
-			mine_reads_call = ["Rscript", r_scripts_loc + "MetaPop_Mine_Reads.R", output_directory_base, str(threads), rlib, joined_fastas, reference_genes, str(min_cov), str(min_dep), str(sub_sample_size)]
+			
 			microdiv_call = ["Rscript", r_scripts_loc + "MetaPop_Microdiversity.R", output_directory_base, str(threads), rlib, joined_fastas, reference_genes, str(min_cov), str(min_dep), str(sub_sample_size)]
 			
 			timer = datetime.now()
 			printable_time = timer.strftime(time_format)
 			print("Linking SNPs starting at:", printable_time+"...", end = "", flush = True)
-			subprocess.call(mine_reads_call)
+			
+			#mine_reads_call = ["Rscript", r_scripts_loc + "MetaPop_Mine_Reads.R", output_directory_base, str(threads), rlib, joined_fastas, reference_genes, str(min_cov), str(min_dep), str(sub_sample_size)]
+			#subprocess.call(mine_reads_call)
+			
+			#Python version
+			linked_file = metapop.metapop_mine_reads.do_mine_reads(output_directory_base, threads)
+			
+			fishers_call = ["Rscript", r_scripts_loc + "MetaPop_Fisher_Exact.R", linked_file, rlib]
+			
+			subprocess.call(fishers_call)
+			
 			#subprocess.call(mine_reads_call, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 			print("done!")
 			
-			
 			timer = datetime.now()
 			printable_time = timer.strftime(time_format)
-			print("Calculating Microdiversity starting at:", printable_time+"...", end = "", flush = True)
+			print("Calculating Microdiversity starting at:", printable_time+"...", flush = True)
 			subprocess.call(microdiv_call)
 			#subprocess.call(microdiv_call, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 			print("Done!")
+			
+			#microdiv_file, lengths_file, out_dir, threads
+			print("Calculating fixation index FST starting at:", printable_time+"...", end = "", flush = True)
+			microdiv_file = os.path.normpath(output_directory_base + "/MetaPop/10.Microdiversity/global_raw_microdiversity_data_snp_loci_only.tsv")
+			lengths_file = os.path.normpath(output_directory_base + "/MetaPop/10.Microdiversity/global_contig_microdiversity.tsv")
+			print("Done!")
+			metapop.metapop_fst.perform_fst(microdiv_file, lengths_file, output_directory_base, threads)
 
 		#shorten the names for R unless micro was done, which does this already
 		if not micro_done:

@@ -729,7 +729,7 @@ def associate_genes(directory, consensus, inputs, min_obs, min_pct):
 	if contig_gene != "MissingNo.":
 	
 		if contig_gene in acceptable_genes:
-			seq = seq.split("")
+			seq = list(seq)
 					
 			for i in range(0, len(gene_correction[contig_gene][0])):
 				#The array's indices are 0-indexed, the gene pos are 1-indexed.
@@ -815,7 +815,7 @@ def associate_genes(directory, consensus, inputs, min_obs, min_pct):
 	if contig != "MissingNo.":
 	
 		if contig in acceptable_genes:
-			seq = seq.split("")
+			seq = list(seq)
 					
 			for i in consensus[contig]:
 				seq[i-1] = bases[consensus[contig][i]]
