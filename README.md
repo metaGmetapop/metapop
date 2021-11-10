@@ -47,14 +47,25 @@ RColorBrewer<br/>
 bit64<br/>
 gggenes<br/>
 
-However, MetaPop has been packaged with conda - to install it, all you must do as a user is install anaconda or miniconda (<https://docs.anaconda.com/anaconda/install/>) on your unix system, and then download the metapop conda package. This will include and install all of the needed software and libraries for you.
+MetaPop has been packaged with conda and pip. To use Metapop, we recommend first creating a conda environment. To set up a conda environment, the user must first install anaconda or miniconda (<https://docs.anaconda.com/anaconda/install/>) on your unix system. Then the user can create a conda environment. <br/>
 
+`conda create --name metapop`<br/>
+`conda activate metapop`<br/>
 `conda install -c bioconda bcftools samtools prodigal pysam`<br/>
 `conda install -c anaconda numpy`<br/>
 `conda install -c conda-forge r-base`<br/>
 `conda install -c r r-data.table r-ggplot2 r-rcolorbrewer`<br/>
 `conda install -c conda-forge r-doparallel r-cowplot r-bit64 r-gggenes r-stringr r-vegan r-compositions r-pheatmap`<br/>
+
+Metapop itself can be installed 2 ways:<br/>
+
 `conda install -c metaGmetapop metapop`<br/>
+
+or <br/>
+
+`pip install metapop`
+
+MetaPop can also be used on iVirus, as part of Cyverse (<https://de.cyverse.org/apps/agave/MetaPop-1.0.0>)
 
 Usage
 ---------------
