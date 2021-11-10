@@ -113,7 +113,7 @@ Preprocessing Arguments:<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`>contig name_gene number # start position # end position # template(1) or antisense(-1) strand # NA`<br/><br/>
 `-id` INT : reads below this percent identity (mismatch/alignment length) are removed. Use -global to calculate as (mismatch/read length). Default 95.<br/>
 `-min` INT : reads with alignments shorter than this are removed. Default 30.<br/>
-`-cov` INT : contigs with breadth of coverage (#bases covered/contig length) less than this are removed from microdiversity. Default 70.<br/>
+`-cov` INT : contigs with breadth of coverage (#bases covered/contig length) less than this are removed from microdiversity. Default 20 (full bacterial and archaeal genomes) and 70 (viral genomes). <br/>
 `-dep` INT : contigs with truncated average depth of coverage (mean of the 10th - 90th percentile depths of coverage) less than this are removed from microdiversity. Default 10.<br/>
 `-trunc` INT : sets the percentiles at which depths of coverage will be truncated for depth. Default 10.<br/>
 `-global` FLAG : Flag indicating to calculate percent identity using read length instead of alignment length.<br/>
