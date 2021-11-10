@@ -137,6 +137,11 @@ Visualization arguments:<br/>
 `-all` FLAG : Metapop will print all contigs from microdiversity results. This will likely take a long time. Default prints top 3 genomes by highest % of genes under positive selection in each sample.<br/>
 `-snp_scale` [local, global, both] : Metapop will print microdiversity results using SNPs assessed at the local (per sample) or global (across all samples) levels, or both. Defaults to local.<br/>
 
+Test Data
+---------------
+
+A test dataset and the expected results are available on iVirus for download: <https://datacommons.cyverse.org/browse/iplant/home/shared/iVirus/MetaPop_Testdata><br/>
+
 Function Details
 ---------------
 
