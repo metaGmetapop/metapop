@@ -59,10 +59,6 @@ MetaPop has been packaged with conda and pip. To use Metapop, we recommend first
 
 Metapop itself can be installed 2 ways:<br/>
 
-`conda install -c metaGmetapop metapop`<br/>
-
-or <br/>
-
 `pip install metapop`
 
 MetaPop can also be used on iVirus, as part of Cyverse (<https://de.cyverse.org/apps/agave/MetaPop-1.0.0>)
