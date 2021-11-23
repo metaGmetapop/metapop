@@ -49,7 +49,7 @@ gggenes<br/>
 
 MetaPop has been packaged with conda and pip. To use Metapop, we recommend first creating a conda environment. To set up a conda environment, the user must first install anaconda or miniconda (<https://docs.anaconda.com/anaconda/install/>) on your unix system. Then the user can create a conda environment. <br/>
 
-`conda create --name metapop`<br/>
+`conda create --name metapop python=3.7`<br/>
 `conda activate metapop`<br/>
 `conda install -c bioconda bcftools samtools prodigal pysam`<br/>
 `conda install -c anaconda numpy`<br/>
