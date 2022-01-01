@@ -51,33 +51,27 @@ MetaPop has been packaged with conda and pip. To use Metapop, we recommend first
 
 `conda create --name metapop python=3.7`<br/>
 `conda activate metapop`<br/>
-`conda install -c bioconda bcftools samtools prodigal pysam`<br/>
-`conda install -c anaconda numpy`<br/>
-`conda install -c conda-forge r-base`<br/>
-`conda install -c r r-data.table r-ggplot2 r-rcolorbrewer`<br/>
-`conda install -c conda-forge r-doparallel r-cowplot r-bit64 r-gggenes r-stringr r-vegan r-compositions r-pheatmap`<br/>
-
-Metapop itself can be installed 2 ways:<br/>
-
-`pip install metapop`
+`conda install -y -c conda-forge mamba`<br/>
+`mamba install -y bcftools samtools prodigal numpy pysam r-ggrepel r-base r-data.table r-ggplot2 r-rcolorbrewer r-doparallel r-cowplot r-bit64 r-gggenes r-stringr r-vegan r-compositions r-pheatmap -c bioconda -c conda-forge -c r`<br/>
+`pip install metapop`<br/>
 
 MetaPop can also be used on iVirus, as part of Cyverse (<https://de.cyverse.org/apps/agave/MetaPop-1.0.0>)
 
 Usage
 ---------------
 
-MetaPop’s function is contained within an R script designed to be run from the command line. Usage should always start with Rscript MetaPop.R, with arguments that follow:
+MetaPop’s function is contained within a python script designed to be run from the command line. Usage should always start with metapop, with arguments that follow:
 
-`Rscript MetaPop.R -dir [BAM file directory] -assem [path to reference genome file] -ct [library counts normalization file] [OPTIONS]`
+`metapop --input_samples [BAM file directory] --reference [path to reference genome file] --norm [library counts normalization file] [OPTIONS]`
 
 Entering this command on the command line will process the mapped reads in the directory specified by -dir, with the file the reads were mapped against specified by -assem, and a file containing sample names and library read counts with -ct.
 
 Arguments:<br/>
 
 Mandatory arguments:<br/>
-`-dir` : Directory containing mapped read files in BAM format (files do not need to be sorted and indexed)<br/>
-`-assem` : Absolute path to assembled contigs<br/>
-`-ct` : Absolute path to counts normalization file in tsv format (only mandatory if performing macrodiversity calculations)<br/>
+`--input_samples` : Directory containing mapped read files in BAM format (files do not need to be sorted and indexed)<br/>
+`--reference` : Absolute path to assembled contigs<br/>
+`--norm` : Absolute path to counts normalization file in tsv format (only mandatory if performing macrodiversity calculations)<br/>
 
 To convert SAM to BAM files, you can use the following command once you activate your conda environment:<br/>
 `samtools view -S -b sample.sam > sample.bam`
@@ -90,48 +84,43 @@ readlibrary2 | 43000000
 readlibrary3  | 73000000
 
 Program options:<br/>
-`-preprocess_only` : Flag indicating to filter reads for %ID, length, and depth of coverage and stop.<br/>
-`-micro_only` : Flag indicating to perform only macrodiversity calculations. Assumes preprocess has been done.<br/>
-`-macro_only` : Flag indicating to perform only microdiversity calculations. Assumes preprocess has been done.<br/>
-`-viz_only` : Flag indicating to only produce visualizations. Assumes preprocess has been done.<br/>
-`-no_micro` Flag : indicating to skip microdiversity and only perform preprocess and macrodiversity<br/>
-`-no_macro` Flag : indicating to skip macrodiversity and only perform preprocess and microdiversity<br/>
-`-no_viz` Flag : indicating to not attempt to visualize results.<br/>
-`-threads` INT : Number of threads to parallelize processes for. Default 4.<br/>
+`--preprocess_only` : Flag indicating to filter reads for %ID, length, and depth of coverage and stop.<br/>
+`--micro_only` : Flag indicating to perform only macrodiversity calculations. Assumes preprocess has been done.<br/>
+`--macro_only` : Flag indicating to perform only microdiversity calculations. Assumes preprocess has been done.<br/>
+`--viz_only` : Flag indicating to only produce visualizations. Assumes preprocess has been done.<br/>
+`--no_micro` Flag : indicating to skip microdiversity and only perform preprocess and macrodiversity<br/>
+`--no_macro` Flag : indicating to skip macrodiversity and only perform preprocess and microdiversity<br/>
+`--no_viz` Flag : indicating to not attempt to visualize results.<br/>
+`--threads` INT : Number of threads to parallelize processes for. Default 4.<br/>
 
 Preprocessing Arguments:<br/>
-`-sam` : absolute path to samtools - optional if samtools is in PATH<br/>
-`-bcf` : absolute path to bcftools - optional if samtools is in PATH<br/>
-`-prodigal` : absolute path to prodigal gene prediction tool - optional if prodigal is in PATH or if -genes specified with existing prodigal FASTA format gene calls.<br/>
-`-genes` : absolute path to prodigal FASTA format gene file for assembled contigs. May be left absent if you want metapop to generate this file. Please note if you supply your own gene file, the header for each gene in the fastea format neeeds to be in prodigal format.<br/><br/>
+`--genes` : absolute path to prodigal FASTA format gene file for assembled contigs. May be left absent if you want metapop to generate this file. Please note if you supply your own gene file, the header for each gene in the fasta format neeeds to be in prodigal format.<br/><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Prodigal FASTA header format example:<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`>contig1234_1 # 2 # 181 # 1 # ID=1_1;partial=10;start_type=Edge;rbs_motif=None;rbs_spacer=None;gc_cont=0.628`<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`>contig name_gene number # start position # end position # template(1) or antisense(-1) strand # NA`<br/><br/>
-`-id` INT : reads below this percent identity (mismatch/alignment length) are removed. Use -global to calculate as (mismatch/read length). Default 95.<br/>
-`-min` INT : reads with alignments shorter than this are removed. Default 30.<br/>
-`-cov` INT : contigs with breadth of coverage (#bases covered/contig length) less than this are removed from microdiversity. Default 20 (full bacterial and archaeal genomes) and 70 (viral genomes). <br/>
-`-dep` INT : contigs with truncated average depth of coverage (mean of the 10th - 90th percentile depths of coverage) less than this are removed from microdiversity. Default 10.<br/>
-`-trunc` INT : sets the percentiles at which depths of coverage will be truncated for depth. Default 10.<br/>
-`-global` FLAG : Flag indicating to calculate percent identity using read length instead of alignment length.<br/>
-`-force_genes` FLAG: Flag indicating that the file specified with -genes doesn't exist, and requests a file with this name be generated using prodigal.<br/>
+`--id_min` INT : reads below this percent identity (mismatch/alignment length) are removed. Use -global to calculate as (mismatch/read length). Default 95.<br/>
+`--min_len` INT : reads with alignments shorter than this are removed. Default 30.<br/>
+`--min_cov` INT : contigs with breadth of coverage (#bases covered/contig length) less than this are removed from microdiversity. Default 20. <br/>
+`--min_dep` INT : contigs with truncated average depth of coverage (mean of the 10th - 90th percentile depths of coverage) less than this are removed from microdiversity. Default 10.<br/>
+`--trunc` INT : sets the percentiles at which depths of coverage will be truncated for depth. Default 10.<br/>
+`--global` FLAG : Flag indicating to calculate percent identity using read length instead of alignment length.<br/>
 
 Variant Calling Arguments:<br/>
-`-first` STRING : prefix of sample to be used as the SNP reference point for all other samples. A prefix is the set of characters before .bam extension in a sample, e.g. a_file.bam has prefix a_file.<br/>
-`-obs` INT : Minimum number of observations of a variant allele at a particular locus for it to be called a SNP. Default 4<br/>
-`-rep` INT : Minimum percent of the population a variant allele at a particular locus must represent for it to be called a SNP. Default 1<br/>
-`-var_qual` INT : Minimum PHRED score for a base to be used in initial variant calling. Default 20.<br/>
+`--ref_sample` STRING : prefix of sample to be used as the SNP reference point for all other samples. A prefix is the set of characters before .bam extension in a sample, e.g. a_file.bam has prefix a_file.<br/>
+`--min_obs` INT : Minimum number of observations of a variant allele at a particular locus for it to be called a SNP. Default 4<br/>
+`--min_pct` INT : Minimum percent of the population a variant allele at a particular locus must represent for it to be called a SNP. Default 1<br/>
+`--min_qual` INT : Minimum PHRED score for a base to be used in initial variant calling. Default 20.<br/>
 
 Microdiversity Arguments:<br/>
-`-subsamp` INT : SNP loci will be subsampled proportionallydown to this depth of coverage for microdiversity calculations. Default 10.<br/>
+`--subsample_size` INT : SNP loci will be subsampled proportionallydown to this depth of coverage for microdiversity calculations. Default 10.<br/>
 
 Macrodiversity Arguments:<br/>
-`-complete_bact` FLAG : Assumes that each contig supplied is a complete bacterial genome. Lowers the threshold of detection from 70% coverage to 20% coverage.<br/>
-`-min_det` INT : Minimum percent of bases covered for a contig to be considered detected. Default 70; will change if -cov is set to a different value of -complete_bact is used.<br/>
-`-min_bp` INT : Minimum number of positions required to be covered for a contig to be considered detected. Default 5000.<br/>
+`--subsample_size` FLAG : Assumes that each contig supplied is a complete bacterial genome. Lowers the threshold of detection from 70% coverage to 20% coverage.<br/>
+`--minimum_bases_for_detection` INT : Minimum number of positions required to be covered for a contig to be considered detected. Default 5000.<br/>
 
 Visualization arguments:<br/>
-`-all` FLAG : Metapop will print all contigs from microdiversity results. This will likely take a long time. Default prints top 3 genomes by highest % of genes under positive selection in each sample.<br/>
-`-snp_scale` [local, global, both] : Metapop will print microdiversity results using SNPs assessed at the local (per sample) or global (across all samples) levels, or both. Defaults to local.<br/>
+`--plot_all` FLAG : Metapop will print all contigs from microdiversity results. This will likely take a long time. Default prints top 3 genomes by highest % of genes under positive selection in each sample.<br/>
+`--snp_scale` [local, global, both] : Metapop will print microdiversity results using SNPs assessed at the local (per sample) or global (across all samples) levels, or both. Defaults to local.<br/>
 
 Test Data
 ---------------
