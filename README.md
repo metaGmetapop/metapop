@@ -76,7 +76,7 @@ Mandatory arguments:<br/>
 To convert SAM to BAM files, you can use the following command once you activate your conda environment:<br/>
 `samtools view -S -b sample.sam > sample.bam`
 
-ct file example (exclude *.bam* suffix and table headers below) 
+ct file example (EXCLUDE *.bam* suffix and table headers below) 
 BAM File Names  | Number Reads or Bps in Read Library
 ------------- | -------------
 readlibrary1  | 52000000 
