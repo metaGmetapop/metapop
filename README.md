@@ -86,12 +86,13 @@ readlibrary3  | 73000000
 
 Program options:<br/>
 `--preprocess_only` : Flag indicating to filter reads for %ID, length, and depth of coverage and stop.<br/>
+`--no_micro --no_macro` : 2 Flags indicating to only perform preprocess <br/>
 `--micro_only` : Flag indicating to perform only macrodiversity calculations. Assumes preprocess has been done.<br/>
 `--macro_only` : Flag indicating to perform only microdiversity calculations. Assumes preprocess has been done.<br/>
 `--viz_only` : Flag indicating to only produce visualizations. Assumes preprocess has been done.<br/>
-`--no_micro` Flag : indicating to skip microdiversity and only perform preprocess and macrodiversity<br/>
-`--no_macro` Flag : indicating to skip macrodiversity and only perform preprocess and microdiversity<br/>
-`--no_viz` Flag : indicating to not attempt to visualize results.<br/>
+`--no_micro` : Flag indicating to skip microdiversity and only perform preprocess and macrodiversity<br/>
+`--no_macro`:  Flag indicating to skip macrodiversity and only perform preprocess and microdiversity<br/>
+`--no_viz` : Flag indicating to not attempt to visualize results.<br/>
 `--threads` INT : Number of threads to parallelize processes for. Default 4.<br/>
 
 Preprocessing Arguments:<br/>
