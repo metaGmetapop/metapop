@@ -64,7 +64,7 @@ MetaPop’s function is contained within a python script designed to be run from
 
 `metapop --input_samples [BAM file directory] --reference [path to reference genome file] --norm [library counts normalization file] [OPTIONS]`
 
-Entering this command on the command line will process the mapped reads in the directory specified by -dir, with the file the reads were mapped against specified by -assem, and a file containing sample names and library read counts with -ct.
+Entering this command on the command line will process the mapped reads in the directory specified by -dir, with the file the reads were mapped against specified by -assem, and a tab-delimited file containing sample names and library read counts with -ct.
 
 Arguments:<br/>
 
@@ -76,7 +76,8 @@ Mandatory arguments:<br/>
 To convert SAM to BAM files, you can use the following command once you activate your conda environment:<br/>
 `samtools view -S -b sample.sam > sample.bam`
 
-ct file example (EXCLUDE *.bam* suffix and table headers below) 
+ct file example <br/>
+(EXCLUDE *.bam* suffix & table headers below) <br/>
 BAM File Names  | Number Reads or Bps in Read Library
 ------------- | -------------
 readlibrary1  | 52000000 
