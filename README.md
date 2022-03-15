@@ -1,7 +1,7 @@
 # MetaPop #
 A pipeline for the macro- and micro-diversity analyses and visualization of metagenomic-derived populations<br/><br/>
 
-Please email gregory.392(at)osu.edu and kenji.gerhardt(at)gmail.com for issues. We are currently fixing some bugs are would love feedback.  
+Please email gregory.392(at)osu.edu and kenji.gerhardt(at)gmail.com for issues.
 
 
 Description
