@@ -209,7 +209,7 @@ def gene_calls(joint_fasta, output_directory_base):
 	else:
 		print("Automatically predicted genes found. Skipping Prediction.")
 		
-	reference_genes = os.path.normpath(output_directory_base+"/MetaPop/01.Genomes_and_Genes/"+ref_base+"_genes.fasta")
+	reference_genes = os.path.abspath(os.path.normpath(output_directory_base+"/MetaPop/01.Genomes_and_Genes/"+ref_base+"_genes.fasta"))
 	
 	return(reference_genes)
 

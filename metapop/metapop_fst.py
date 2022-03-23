@@ -24,8 +24,9 @@ def contig_lengths(file):
 		if header:
 			header = False
 		else:
-			segs = line.strip().split()
+			segs = line.strip().split('\t')
 			contig = segs[0]
+			contig = contig.split()[0]
 			bp = int(segs[4])
 			
 			lengths[contig] = bp
@@ -43,7 +44,7 @@ def format_microdiv(file, lengths):
 	fh = open(file)	
 	header = True
 	for line in fh:
-		segs = line.strip().split()
+		segs = line.strip().split('\t')
 		if header:
 			header = False
 			colnames = segs
@@ -51,6 +52,7 @@ def format_microdiv(file, lengths):
 			continue
 			
 		contig = segs[1]
+		contig = contig.split()[0]
 		source = segs[9]
 		
 		all_sources.append(source)

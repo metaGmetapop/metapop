@@ -24,11 +24,13 @@ def read_and_format_linked_candidates(file):
 			segs = line.strip().split("\t")
 			#contig_pos = segs[0]
 			contig = segs[1]
+			contig = contig.split()[0]
 			pos = int(segs[2])
 			ref_base = segs[3]
 			source = segs[9]
 			snps = segs[10]
 			contig_gene = segs[11]
+			contig_gene = contig_gene.split()[0]
 			#if OC == 1, strand = forward, else strand = reverse
 			OC = int(segs[14])
 			codon = int(segs[15])
@@ -102,7 +104,6 @@ def parse_cig_to_pos(cig, seq, left_side, positions):
 				pad_left = low - pos_in_genome
 				pad_right = high - pos_in_genome
 				ret = [seq[pad_left + pos_in_read], seq[pad_right+ pos_in_read]]
-				#Checking code
 				#print(cig, positions, ret, pad_left, pad_right, pos_in_read, )
 				#And we're done, stop looking.
 				break
@@ -137,7 +138,9 @@ def read_one_range(command):
 	
 	for read in reader.stdout:
 		segs = read.strip().decode().split("\t")
-		genome = segs[2].decode()
+		
+		genome = segs[2]
+		genome = genome.split()[0]
 		
 		#Leftmost is 1-based.
 		leftmost = int(segs[3])
@@ -149,6 +152,9 @@ def read_one_range(command):
 		for c in re.findall(r"([0-9]+)([a-z]+)", cig, re.I):
 			parsed_cig.append(c)
 		
+		if len(parsed_cig) == 0:
+			continue
+		
 		if len(parsed_cig) == 1:
 			#This is all matches; selection of the codon is simple.
 			chars = []
@@ -159,6 +165,10 @@ def read_one_range(command):
 					pass
 					
 			chars = ''.join(chars)
+			#Skip meaningless.
+			if len(chars) == 0:
+				continue
+				
 			if chars not in results:
 				results[chars] = 1
 			else:
@@ -168,7 +178,7 @@ def read_one_range(command):
 			try:
 				chars = parse_cig_to_pos(parsed_cig, seq, leftmost, gss)
 			except:
-				pass
+				chars = None
 			
 			if chars is not None:
 				#If chars is none, there was a parse fail in the cigar string. We just skip those.
@@ -455,7 +465,6 @@ def do_mine_reads(output_directory, threads):
 
 
 	
-
 
 
 

@@ -245,6 +245,7 @@ def main():
 	else:
 		#Produce non-relative path for accessing the genes file
 		reference_genes = os.path.abspath(reference_genes)
+		print("Using", reference_genes, "as the genes file.")
 		
 	#groups each input file with its contained contigs
 	mag_contig_dict, mag_length_dict = metapop.metapop_helper_functions.create_mag_log(reference_fasta, output_directory_base+"/MetaPop/00.Log_and_Parameters/mags.txt", treat_as_mag)
@@ -309,14 +310,15 @@ def main():
 			
 			if not skip_var_call:
 				#update to base corrected genomes, genes
-				joined_fastas, reference_genes = metapop.metapop_snp_call.call_variant_positions(output_directory_base, joined_fastas, min_obs, min_q, min_pct, threads, ref_samp)
+				joined_fastas, reference_genes = metapop.metapop_snp_call.call_variant_positions(output_directory_base, joined_fastas, min_obs, min_q, min_pct, threads, ref_samp, reference_genes)
 				#do codon bias
 				cb_call = ["Rscript", r_scripts_loc + "MetaPop_Codon_Bias_Calc.R", output_directory_base, rlib]
 				subprocess.call(cb_call)
 			else:
 				#The R code moves into the output directory, so we have to remove the directory prefix in the path.
-				joined_fastas, reference_genes = joined_fastas[(len(output_directory_base)+1):], reference_genes[(len(output_directory_base)+1):]
-			
+				#joined_fastas, reference_genes = joined_fastas[(len(output_directory_base)+1):], reference_genes[(len(output_directory_base)+1):]
+				joined_fastas, reference_genes = os.path.abspath(joined_fastas), os.path.abspath(reference_genes)
+				
 			metapop.metapop_helper_functions.micro_prep(output_directory_base)
 
 			timer = datetime.now()
@@ -330,7 +332,6 @@ def main():
 			
 			subprocess.call(fishers_call)
 			
-			#subprocess.call(mine_reads_call, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 			print("done!")
 			
 			microdiv_call = ["Rscript", r_scripts_loc + "MetaPop_Microdiversity.R", output_directory_base, str(threads), rlib, joined_fastas, reference_genes, str(min_cov), str(min_dep), str(sub_sample_size)]
@@ -351,7 +352,8 @@ def main():
 
 		#shorten the names for R unless micro was done, which does this already
 		if not micro_done:
-			joined_fastas, reference_genes = joined_fastas[(len(output_directory_base)+1):], reference_genes[(len(output_directory_base)+1):]
+			joined_fastas, reference_genes = os.path.abspath(joined_fastas), os.path.abspath(reference_genes)
+			#joined_fastas, reference_genes = joined_fastas[(len(output_directory_base)+1):], reference_genes[(len(output_directory_base)+1):]
 			
 		if not no_mac:
 			metapop.metapop_helper_functions.macro_prep(output_directory_base)
@@ -378,9 +380,12 @@ def main():
 		
 		names = ",".join(names)
 
-		preproc_sums_call = ["Rscript", r_scripts_loc + "MetaPop_Preprocessing_Summaries.R", output_directory_base, str(threads), rlib, joined_fastas, reference_genes, str(min_cov), str(min_dep), original_bams, names]
+		preproc_sums_call = ["Rscript", r_scripts_loc + "MetaPop_Preprocessing_Summaries.R", output_directory_base, str(threads), rlib, joined_fastas, reference_genes, str(min_cov), str(min_dep), os.path.abspath(os.path.normpath(original_bams)), names]
 		microdiv_viz = ["Rscript", r_scripts_loc + "MetaPop_Microdiversity_Visualizations.R", output_directory_base, str(threads), rlib, joined_fastas, reference_genes, str(min_cov), str(min_dep), str(sub_sample_size), plot_all, snp_scale]
 		cb_viz = ["Rscript", r_scripts_loc + "MetaPop_Codon_Bias_Viz.R", output_directory_base, str(threads), rlib, joined_fastas, reference_genes, str(min_cov), str(min_dep)]
+		
+		
+		#quit()
 		
 		timer = datetime.now()
 		printable_time = timer.strftime(time_format)

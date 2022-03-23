@@ -13,6 +13,17 @@ from struct import unpack
 from urllib.request import pathname2url
 import math
 
+
+def filter_thread_starter(_cmd, _cld, _im, _imd):
+	global contig_mag_dict
+	global contig_length_dict
+	global is_mags
+	global inverted_mag_dict
+	contig_mag_dict = _cmd
+	contig_length_dict = _cld
+	is_mags = _im
+	inverted_mag_dict = _imd
+
 #The main function for this section. Ensures the proper directories exist and issues calls to the child functions; manages parallelism per sample
 def filt(files, command_base, b_d_base, threads, mag_dict, length_dict, ref_file):
 
@@ -133,20 +144,21 @@ def filt(files, command_base, b_d_base, threads, mag_dict, length_dict, ref_file
 			_inverted_mag_dict[contig] = file
 	
 	#Make these accessible for parallel later.
-	global contig_mag_dict
-	global contig_length_dict
-	global is_mags
-	global inverted_mag_dict
+	#global contig_mag_dict
+	#global contig_length_dict
+	#global is_mags
+	#global inverted_mag_dict
 	#global ref_fasta
 	
-	inverted_mag_dict = _inverted_mag_dict
-	contig_mag_dict = mag_dict
-	contig_length_dict = length_dict
+	#inverted_mag_dict = _inverted_mag_dict
+	#contig_mag_dict = mag_dict
+	#contig_length_dict = length_dict
 	is_mags = b_d_base[2]
 	ref_fasta = ref_file
 	
 	procs = min(threads, len(bams))
-	p = multiprocessing.Pool(procs)
+	#(_cmd, _cld, _im, _imd)
+	p = multiprocessing.Pool(procs, initializer=filter_thread_starter, initargs = (mag_dict, length_dict, is_mags, _inverted_mag_dict,))
 	
 	timer = datetime.now()
 	printable_time = timer.strftime(time_format)
@@ -231,8 +243,11 @@ def parse_reads(commands):
 		line = line.decode().strip()
 		print(line, file = depth_per_pos_fh)
 		
-		segs = line.split()
+		segs = line.split("\t")
+		
 		contig = segs[0]
+		#Select only the readID in case of wrong format.
+		contig = contig.split()[0]
 		#Pos. in genome is segs[1], but it's not needed here.
 		depth = int(segs[2])
 		

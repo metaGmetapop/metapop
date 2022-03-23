@@ -41,8 +41,12 @@ def output_file_names(directory, reads):
 		
 	return(output_files)
 	
-def call_variant_positions(directory, ref_fasta, min_obs, min_qual, min_pct, threads, ref_sample):
 	
+def snp_refinement_initializer(var_pos):
+	global _all_variant_positions
+	_all_variant_positions = var_pos
+	
+def call_variant_positions(directory, ref_fasta, min_obs, min_qual, min_pct, threads, ref_sample, ref_genes):
 	prep(directory)
 	#base names at this point
 	reads = gather_files(directory)
@@ -82,23 +86,41 @@ def call_variant_positions(directory, ref_fasta, min_obs, min_qual, min_pct, thr
 	os.remove(directory+"/MetaPop/ploidy.txt")
 		
 	
-	global _all_variant_positions
-	
+	#global _all_variant_positions
+	'''
 	unique_contig_pos = {}
 	
 	for vcf in called_snps:
 		fh = open(vcf)
 		for line in fh:
-			segs = line.strip().split()
+			segs = line.strip().split('\t')
 			contig = segs[0]
+			#First word only
+			contig = contig.split()[0]
 			pos = int(segs[1])
 			if contig not in unique_contig_pos:
 				unique_contig_pos[contig] = [pos]
 			else:
 				if pos not in unique_contig_pos[contig]:
 					unique_contig_pos[contig].append(pos)
-					
-	_all_variant_positions = unique_contig_pos
+	'''				
+	#_all_variant_positions = unique_contig_pos
+	
+	_all_variant_positions = {}
+	
+	for vcf in called_snps:
+		fh = open(vcf)
+		for line in fh:
+			segs = line.strip().split('\t')
+			contig = segs[0]
+			#First word only
+			contig = contig.split()[0]
+			pos = int(segs[1])
+			if contig not in _all_variant_positions:
+				_all_variant_positions[contig] = [pos]
+			else:
+				if pos not in _all_variant_positions[contig]:
+					_all_variant_positions[contig].append(pos)
 	
 	##########
 	variant_commands = []
@@ -111,13 +133,13 @@ def call_variant_positions(directory, ref_fasta, min_obs, min_qual, min_pct, thr
 	printable_time = timer.strftime(time_format)
 	print("Refining SNP calls starting at:", printable_time)
 
-	pool = multiprocessing.Pool(min(threads, num_samps))
+	pool = multiprocessing.Pool(min(threads, num_samps), initializer=snp_refinement_initializer, initargs = (_all_variant_positions,))
 	pool.map(pileup, variant_commands)
 	pool.close()
 
 	consensus, snp_inputs = choose_consensus(directory, ref_sample)
 
-	new_genomes, new_genes = associate_genes(directory, consensus, snp_inputs, min_obs, min_pct)
+	new_genomes, new_genes = associate_genes(directory, consensus, snp_inputs, min_obs, min_pct, ref_genes)
 	
 	timer = datetime.now()
 	printable_time = timer.strftime(time_format)
@@ -191,9 +213,14 @@ def pileup(pileup_command):
 	pile_stream = subprocess.Popen(mpileup_call, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 	
 	for line in pile_stream.stdout:
-		segs = line.strip().decode().split()
+	
+		segs = line.strip().decode().split("\t")
 		contig = segs[0]
+		#First word only
+		contig = contig.split()[0]
+		
 		pos = int(segs[1])
+		#All variant positions passed as a pool init explicitly in 0.0.50
 		if contig in _all_variant_positions:
 			if pos in _all_variant_positions[contig]:
 				#Just make sure.
@@ -253,8 +280,10 @@ def choose_consensus(directory, reference_file = ""):
 		fh = open(file)
 		
 		for line in fh:
-			segs = line.strip().split()
+			segs = line.strip().split('\t')
 			contig = segs[0]
+			#First word only
+			contig = contig.split()[0]
 			#Position here is 1 based, so we have to correct.
 			pos = int(segs[1])
 			
@@ -370,8 +399,7 @@ def revcomp(bases):
 		
 	return bases
 		
-def associate_genes(directory, consensus, inputs, min_obs, min_pct):
-	genes_file = directory + "/MetaPop/01.Genomes_and_Genes/all_genomes_genes.fasta"
+def associate_genes(directory, consensus, inputs, min_obs, min_pct, genes_file):
 	
 	bases = ["A", "T", "C", "G"]
 	
@@ -418,6 +446,7 @@ def associate_genes(directory, consensus, inputs, min_obs, min_pct):
 				
 				if len(line.strip()) > 1:
 					segs = line.strip().split(" # ")
+					#Prodigal is correctly formatted.
 					contig_gene = segs[0]
 					
 					start = int(segs[1])
@@ -492,7 +521,7 @@ def associate_genes(directory, consensus, inputs, min_obs, min_pct):
 		linked_snps_tracker[source_name] = {}
 		
 		for line in fh:
-			segs = line.strip().split()
+			segs = line.strip().split('\t')
 			contig = segs[0] 
 			pos = int(segs[1])
 			counts = list(map(int, segs[2:]))
@@ -791,8 +820,10 @@ def associate_genes(directory, consensus, inputs, min_obs, min_pct):
 					print(seq, file = updated_genomes)
 				
 				if len(line.strip()) > 1:
-					segs = line.strip().split()
+					#contig = line.strip()[1:]
+					segs = line.strip().split('\t')
 					contig = segs[0][1:]
+					contig = contig.split()[0]
 					
 					
 				else:
@@ -803,8 +834,9 @@ def associate_genes(directory, consensus, inputs, min_obs, min_pct):
 			
 			else:
 				if len(line.strip()) > 1:
-					segs = line.strip().split()
+					segs = line.strip().split("\t")
 					contig = segs[0][1:]
+					contig = contig.split()[0]
 				else:
 					print("Missing sequence ID found.")
 					contig = "MissingNo."

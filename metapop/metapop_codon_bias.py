@@ -17,7 +17,6 @@ import numpy as np
 from collections import defaultdict
 
 
-
 def codon_converter():
 	cols = ["AAA", "AAT", "AAC", "AAG",
 			"ATA", "ATT", "ATC", "ATG",
@@ -112,9 +111,11 @@ def calculate_codon_bias_per_genome(gene_file, counts_file):
 	genomes = []
 	fh = open(gene_file)
 	for line in fh:
-		segs = line.strip().split()
-		genes.append(segs[2])
-		genomes.append(segs[3])
+		segs = line.strip().split('\t')
+		gene = segs[2].split()[0]
+		genes.append(gene)
+		genome = segs[3].split()[0]
+		genomes.append(genome)
 		
 	fh.close()
 	
