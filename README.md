@@ -54,13 +54,10 @@ MetaPop has been packaged with conda and pip. To use Metapop, we recommend first
 `conda create --name metapop python=3.7`<br/>
 `conda activate metapop`<br/>
 `conda install -y -c conda-forge mamba`<br/>
-`cd <pathto>/miniconda3/envs/metapop/lib`<br/>
-`ln -s libcrypto.so.1.1 libcrypto.so.1.0.0`<br/>
-`conda install -c bioconda --freeze-installed samtools==1.9`<br/>
 `mamba install -y bcftools samtools prodigal numpy pysam r-ggrepel r-base r-data.table r-ggplot2 r-rcolorbrewer r-doparallel r-cowplot r-bit64 r-gggenes r-stringr r-vegan r-compositions r-pheatmap -c bioconda -c conda-forge -c r`<br/>
 `pip install metapop`<br/>
 
-Samtools v 1.9 is the last version that can be used. MetaPop can also be used on iVirus, as part of Cyverse (<https://de.cyverse.org/apps/agave/MetaPop-1.0.0>)
+MetaPop can also be used on iVirus, as part of Cyverse (<https://de.cyverse.org/apps/agave/MetaPop-1.0.0>)
 
 Usage
 ---------------
