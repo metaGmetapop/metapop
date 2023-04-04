@@ -3,6 +3,7 @@ A pipeline for the macro- and micro-diversity analyses and visualization of meta
 
 Please email gregory.392(at)osu.edu and kenji.gerhardt(at)gmail.com for issues.
 
+****We're currently doing a major overhaul of the pipeline into Nextflow, so updates on this version have been stalled**** 
 
 Description
 ---------------
