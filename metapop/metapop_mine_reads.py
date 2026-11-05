@@ -349,6 +349,7 @@ def formatted_to_valid_combos(snps, mined_reads, output):
 							
 							if 1 < len(key) < 3:
 								#These are the only ones possible
+								new = key  # unmatched 2-base key (e.g. 3-SNP codons)
 								if codon_positions == [1, 2]:
 									new = key + "*"
 								if codon_positions == [2, 3]:
